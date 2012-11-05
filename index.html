@@ -44,5 +44,26 @@
     <script src="js/vec2.js"></script>
     <script src="js/main.js"></script>
 
+	<script id="vertexShader" type="x-shader/x-vertex">
+      attribute vec4 Position;
+      uniform mat4 modelview;
+      uniform mat4 projection;
+      void main(void)
+      {
+          vec4 p = Position;
+          gl_Position = projection * modelview * p;
+      }
+	</script>
+
+	<script id="fragmentShader" type="x-shader/x-fragment">
+      precision highp float;
+      precision highp vec3;
+      uniform vec4 color;
+      void main()
+      {
+          gl_FragColor = color;
+      }
+	</script>
+
   </body>
 </html>
