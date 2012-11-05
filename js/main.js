@@ -346,27 +346,31 @@ exports.extname = function(path) {
 
 require.define("/application.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Application, _keys, _mouse, _updateKeys;
+  var Application, Display;
 
-  _mouse = {
-    position: {
-      x: -1,
-      y: -1
-    },
-    within: false,
-    hot: false,
-    moved: false
-  };
-
-  _keys = {
-    alt: false,
-    control: false,
-    shift: false
-  };
+  Display = require('./display');
 
   Application = (function() {
 
     function Application() {
+      var c, gl, height, msg, width;
+      try {
+        c = $('canvas').get(0);
+        gl = c.getContext('experimental-webgl', {
+          antialias: true
+        });
+        if (!gl) {
+          throw new Error();
+        }
+      } catch (error) {
+        msg = 'Alas, your browser does not support WebGL.';
+        $('canvas').replaceWith("<p class='error'>" + msg + "</p>");
+      }
+      if (gl) {
+        width = parseInt($('canvas').css('width'));
+        height = parseInt($('canvas').css('height'));
+        this.display = new Display(gl, width, height);
+      }
       this.assignEventHandlers();
       this.requestAnimationFrame();
     }
@@ -381,7 +385,9 @@ require.define("/application.coffee", function (require, module, exports, __dirn
     };
 
     Application.prototype.tick = function() {
-      return this.requestAnimationFrame();
+      var _ref;
+      this.requestAnimationFrame();
+      return (_ref = this.display) != null ? _ref.render() : void 0;
     };
 
     Application.prototype.onResize = function() {};
@@ -391,52 +397,32 @@ require.define("/application.coffee", function (require, module, exports, __dirn
       $(window).resize(function() {
         return _this.onResize();
       });
-      $(document).keydown(function(e) {
-        return _updateKeys(e);
-      });
+      $(document).keydown(function(e) {});
       $('body').mousemove(function(e) {
         var p, x, y;
         p = $(this).position();
-        x = _mouse.position.x = e.clientX - p.left;
-        y = _mouse.position.y = e.clientY - p.top;
-        _mouse.within = 1;
-        _mouse.moved = true;
-        _updateKeys(e);
-        return events.trigger('mousemove', x, y, _keys);
+        x = e.clientX - p.left;
+        return y = e.clientY - p.top;
       });
       $('body').click(function(e) {
         var p, x, y;
         p = $(this).position();
-        x = _mouse.position.x = e.clientX - p.left;
-        y = _mouse.position.y = e.clientY - p.top;
-        _mouse.within = 1;
-        _updateKeys(e);
-        return events.trigger('click', x, y, _keys);
+        x = e.clientX - p.left;
+        return y = e.clientY - p.top;
       });
       $('body').mousedown(function(e) {
         var p, x, y;
         p = $(this).position();
-        x = _mouse.position.x = e.clientX - p.left;
-        y = _mouse.position.y = e.clientY - p.top;
-        _mouse.within = 1;
-        _updateKeys(e);
-        return events.trigger('mousedown', x, y, _keys);
+        x = e.clientX - p.left;
+        return y = e.clientY - p.top;
       });
       $('body').mouseup(function(e) {
         var p, x, y;
         p = $(this).position();
-        x = _mouse.position.x = e.clientX - p.left;
-        y = _mouse.position.y = e.clientY - p.top;
-        _mouse.within = 1;
-        _updateKeys(e);
-        return events.trigger('mouseup', x, y, _keys);
+        x = e.clientX - p.left;
+        return y = e.clientY - p.top;
       });
-      $('body').mouseout(function(e) {
-        _mouse.position.x = -1;
-        _mouse.position.y = -1;
-        _mouse.within = false;
-        return _updateKeys(e);
-      });
+      $('body').mouseout(function(e) {});
       $('.home-button').click(function(e) {
         return _this.goHomePage();
       });
@@ -449,16 +435,37 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
   })();
 
-  _updateKeys = function(e) {
-    _keys.alt = e.altKey;
-    _keys.ctrl = e.ctrlKey;
-    _keys.shift = e.shiftKey;
-    _keys.lmb = e.which === 1;
-    _keys.mmb = e.which === 2;
-    return _keys.rmb = e.which === 3;
-  };
-
   module.exports = Application;
+
+}).call(this);
+
+});
+
+require.define("/display.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var Display, gl;
+
+  gl = null;
+
+  Display = (function() {
+
+    function Display(context, width, height) {
+      this.width = width;
+      this.height = height;
+      gl = context;
+      this.ready = false;
+      gl.clearColor(0.9, 0.9, 0.9, 1.0);
+    }
+
+    Display.prototype.render = function() {
+      return gl.clear(gl.COLOR_BUFFER_BIT);
+    };
+
+    return Display;
+
+  })();
+
+  module.exports = Display;
 
 }).call(this);
 

@@ -33,6 +33,11 @@ h1 {
     border-width:2px;
 }
 
+.error {
+    margin: 5px;
+    color: #a11;
+}
+
 #doneButton {
     color:#00f;
 }
