@@ -32,25 +32,12 @@ class Application
 
   assignEventHandlers: ->
     $(window).resize => @onResize()
-    $(document).keydown (e) =>
-    $('body').mousemove (e) ->
+
+    # (0,0) is upper-left corner.
+    $('canvas').click (e) ->
       p = $(this).position()
-      x =  e.clientX - p.left
-      y = e.clientY - p.top
-    $('body').click (e) ->
-      p = $(this).position()
-      x = e.clientX - p.left
-      y = e.clientY - p.top
-    $('body').mousedown (e) ->
-      p = $(this).position()
-      x = e.clientX - p.left
-      y = e.clientY - p.top
-    $('body').mouseup (e) ->
-      p = $(this).position()
-      x = e.clientX - p.left
-      y = e.clientY - p.top
-    $('body').mouseout (e) ->
-    $('.home-button').click (e) => @goHomePage()
-    $('.unit-button').click (e) => @goUnitPage @CurrentUnit
+      x = e.offsetX
+      y = e.offsetY
+      console.info x, y
 
 module.exports = Application

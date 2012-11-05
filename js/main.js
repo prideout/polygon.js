@@ -397,37 +397,12 @@ require.define("/application.coffee", function (require, module, exports, __dirn
       $(window).resize(function() {
         return _this.onResize();
       });
-      $(document).keydown(function(e) {});
-      $('body').mousemove(function(e) {
+      return $('canvas').click(function(e) {
         var p, x, y;
         p = $(this).position();
-        x = e.clientX - p.left;
-        return y = e.clientY - p.top;
-      });
-      $('body').click(function(e) {
-        var p, x, y;
-        p = $(this).position();
-        x = e.clientX - p.left;
-        return y = e.clientY - p.top;
-      });
-      $('body').mousedown(function(e) {
-        var p, x, y;
-        p = $(this).position();
-        x = e.clientX - p.left;
-        return y = e.clientY - p.top;
-      });
-      $('body').mouseup(function(e) {
-        var p, x, y;
-        p = $(this).position();
-        x = e.clientX - p.left;
-        return y = e.clientY - p.top;
-      });
-      $('body').mouseout(function(e) {});
-      $('.home-button').click(function(e) {
-        return _this.goHomePage();
-      });
-      return $('.unit-button').click(function(e) {
-        return _this.goUnitPage(_this.CurrentUnit);
+        x = e.offsetX;
+        y = e.offsetY;
+        return console.info(x, y);
       });
     };
 
