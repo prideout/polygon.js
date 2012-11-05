@@ -353,6 +353,13 @@ require.define("/application.coffee", function (require, module, exports, __dirn
   Application = (function() {
 
     function Application() {
+      this.pts = [];
+      this.initDisplay();
+      this.assignEventHandlers();
+      this.requestAnimationFrame();
+    }
+
+    Application.prototype.initDisplay = function() {
       var c, gl, height, msg, width;
       try {
         c = $('canvas').get(0);
@@ -369,11 +376,9 @@ require.define("/application.coffee", function (require, module, exports, __dirn
       if (gl) {
         width = parseInt($('canvas').css('width'));
         height = parseInt($('canvas').css('height'));
-        this.display = new Display(gl, width, height);
+        return this.display = new Display(gl, width, height);
       }
-      this.assignEventHandlers();
-      this.requestAnimationFrame();
-    }
+    };
 
     Application.prototype.requestAnimationFrame = function() {
       var onTick,
@@ -392,6 +397,14 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
     Application.prototype.onResize = function() {};
 
+    Application.prototype.onClick = function(x, y) {
+      this.pts.push(new vec2(x, y));
+      if (!(this.display != null)) {
+        return;
+      }
+      return this.display.setPoints(this.pts);
+    };
+
     Application.prototype.assignEventHandlers = function() {
       var _this = this;
       $(window).resize(function() {
@@ -399,10 +412,10 @@ require.define("/application.coffee", function (require, module, exports, __dirn
       });
       return $('canvas').click(function(e) {
         var p, x, y;
-        p = $(this).position();
+        p = $('canvas').position();
         x = e.offsetX;
         y = e.offsetY;
-        return console.info(x, y);
+        return _this.onClick(x, y);
       });
     };
 
@@ -434,6 +447,10 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
 
     Display.prototype.render = function() {
       return gl.clear(gl.COLOR_BUFFER_BIT);
+    };
+
+    Display.prototype.setPoints = function(pts) {
+      return console.info('points:', pts);
     };
 
     return Display;
