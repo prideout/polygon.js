@@ -27,15 +27,9 @@ class Application
     #tbd
 
   assignEventHandlers: ->
-    events = Backbone.Events
     $(window).resize => @onResize()
     $(document).keydown (e) =>
       _updateKeys e
-      switch e.keyCode
-        when 38 then events.trigger 'keydown', 'up'
-        when 40 then events.trigger 'keydown', 'down'
-        when 37 then events.trigger 'keydown', 'left'
-        when 39 then events.trigger 'keydown', 'right'
     $('body').mousemove (e) ->
       p = $(this).position()
       x = _mouse.position.x = e.clientX - p.left
@@ -43,28 +37,24 @@ class Application
       _mouse.within = 1
       _mouse.moved = true
       _updateKeys e
-      events.trigger 'mousemove', x, y, _keys
     $('body').click (e) ->
       p = $(this).position()
       x = _mouse.position.x = e.clientX - p.left
       y = _mouse.position.y = e.clientY - p.top
       _mouse.within = 1
       _updateKeys e
-      events.trigger 'click', x, y, _keys
     $('body').mousedown (e) ->
       p = $(this).position()
       x = _mouse.position.x = e.clientX - p.left
       y = _mouse.position.y = e.clientY - p.top
       _mouse.within = 1
       _updateKeys e
-      events.trigger 'mousedown', x, y, _keys
     $('body').mouseup (e) ->
       p = $(this).position()
       x = _mouse.position.x = e.clientX - p.left
       y = _mouse.position.y = e.clientY - p.top
       _mouse.within = 1
       _updateKeys e
-      events.trigger 'mouseup', x, y, _keys
     $('body').mouseout (e) ->
       _mouse.position.x = -1
       _mouse.position.y = -1

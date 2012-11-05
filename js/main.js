@@ -387,24 +387,12 @@ require.define("/application.coffee", function (require, module, exports, __dirn
     Application.prototype.onResize = function() {};
 
     Application.prototype.assignEventHandlers = function() {
-      var events,
-        _this = this;
-      events = Backbone.Events;
+      var _this = this;
       $(window).resize(function() {
         return _this.onResize();
       });
       $(document).keydown(function(e) {
-        _updateKeys(e);
-        switch (e.keyCode) {
-          case 38:
-            return events.trigger('keydown', 'up');
-          case 40:
-            return events.trigger('keydown', 'down');
-          case 37:
-            return events.trigger('keydown', 'left');
-          case 39:
-            return events.trigger('keydown', 'right');
-        }
+        return _updateKeys(e);
       });
       $('body').mousemove(function(e) {
         var p, x, y;
