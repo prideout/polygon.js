@@ -431,9 +431,26 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
 require.define("/display.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Display, gl;
+  var Display, gl, semantics, shaders;
 
   gl = null;
+
+  semantics = {
+    POSITION: 0,
+    VERTEXID: 0,
+    NORMAL: 1,
+    TEXCOORD: 2
+  };
+
+  shaders = {};
+
+  shaders.basic = {
+    vs: ['basicvs'],
+    fs: ['basicfs'],
+    attribs: {
+      Position: semantics.POSITION
+    }
+  };
 
   Display = (function() {
 
@@ -442,6 +459,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       this.height = height;
       gl = context;
       this.ready = false;
+      this.compilePrograms(shaders);
       gl.clearColor(0.9, 0.9, 0.9, 1.0);
     }
 
@@ -451,6 +469,71 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
 
     Display.prototype.setPoints = function(pts) {
       return console.info('points:', pts);
+    };
+
+    Display.prototype.compilePrograms = function(shaders) {
+      var name, shd, _results;
+      this.programs = {};
+      _results = [];
+      for (name in shaders) {
+        shd = shaders[name];
+        _results.push(this.programs[name] = this.compileProgram(shd.vs, shd.fs, shd.attribs));
+      }
+      return _results;
+    };
+
+    Display.prototype.compileProgram = function(vNames, fNames, attribs) {
+      var fShader, key, numUniforms, program, status, u, uniforms, vShader, value, _i, _len;
+      vShader = this.compileShader(vNames, gl.VERTEX_SHADER);
+      fShader = this.compileShader(fNames, gl.FRAGMENT_SHADER);
+      program = gl.createProgram();
+      gl.attachShader(program, vShader);
+      gl.attachShader(program, fShader);
+      for (key in attribs) {
+        value = attribs[key];
+        gl.bindAttribLocation(program, value, key);
+      }
+      gl.linkProgram(program);
+      status = gl.getProgramParameter(program, gl.LINK_STATUS);
+      if (!status) {
+        console.error("Could not link " + vNames + " with " + fNames);
+      }
+      numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+      uniforms = (function() {
+        var _i, _results;
+        _results = [];
+        for (u = _i = 0; 0 <= numUniforms ? _i < numUniforms : _i > numUniforms; u = 0 <= numUniforms ? ++_i : --_i) {
+          _results.push(gl.getActiveUniform(program, u).name);
+        }
+        return _results;
+      })();
+      for (_i = 0, _len = uniforms.length; _i < _len; _i++) {
+        u = uniforms[_i];
+        program[u] = gl.getUniformLocation(program, u);
+      }
+      return program;
+    };
+
+    Display.prototype.compileShader = function(names, type) {
+      var handle, name, source, status;
+      source = (function() {
+        var _i, _len, _results;
+        _results = [];
+        for (_i = 0, _len = names.length; _i < _len; _i++) {
+          name = names[_i];
+          _results.push($('#' + name).text());
+        }
+        return _results;
+      })();
+      source = source.join();
+      handle = gl.createShader(type);
+      gl.shaderSource(handle, source);
+      gl.compileShader(handle);
+      status = gl.getShaderParameter(handle, gl.COMPILE_STATUS);
+      if (!status) {
+        console.error(gl.getShaderInfoLog(handle));
+      }
+      return handle;
     };
 
     return Display;
