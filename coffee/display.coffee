@@ -14,18 +14,55 @@ shaders.basic =
   attribs:
     Position: semantics.POSITION
 
+glCheck = (msg) ->
+    console.error(msg) unless gl.getError() == gl.NO_ERROR
+
+flatten = (array) ->
+  flattened = []
+  for element in array
+    if element instanceof Array
+      flattened = flattened.concat flatten element
+    else if element instanceof vec2
+      flattened = flattened.concat [element.x, element.y]
+    else
+      flattened.push element
+  flattened
+
 class Display
   constructor: (context, @width, @height) ->
     gl = context
-    @ready = false
     @compilePrograms shaders
+    @coordsArray = []
+    @coordsBuffer = gl.createBuffer()
     gl.clearColor 0.9, 0.9, 0.9, 1.0
+    gl.lineWidth 2
 
   render: ->
     gl.clear gl.COLOR_BUFFER_BIT
 
+    return if @coordsArray.length is 0
+
+    program = @programs.basic
+    gl.useProgram program
+    gl.uniform4f program.color, 1, 0, 0, 1
+    mv = new mat4()
+    proj = new mat4()
+    gl.uniformMatrix4fv program.modelview, false, mv.elements
+    gl.uniformMatrix4fv program.projection, false, proj.elements
+
+    gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
+    gl.enableVertexAttribArray semantics.POSITION
+    gl.vertexAttribPointer semantics.POSITION, 2, gl.FLOAT, false, stride = 8, 0
+    gl.drawArrays gl.POINTS, 0, @coordsArray.length
+    gl.disableVertexAttribArray semantics.POSITION
+
   setPoints: (pts) ->
-    console.info 'points:', pts
+    @coordsArray = pts.slice 0
+    typedArray = new Float32Array flatten @coordsArray
+    gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
+    gl.bufferData gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
+    glCheck "Error when trying to create VBO"
+    console.info "#{pts.length} points received: ", typedArray
 
   compilePrograms: (shaders) ->
     @programs = {}
@@ -48,9 +85,7 @@ class Display
     program
 
   compileShader: (names, type) ->
-    element = $('#' + name)
-    source = (element.text() for name in names)
-    source = source.join()
+    source = ($('#' + id).text() for id in names).join()
     handle = gl.createShader type
     gl.shaderSource handle, source
     gl.compileShader handle

@@ -431,7 +431,7 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
 require.define("/display.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Display, gl, semantics, shaders;
+  var Display, flatten, gl, glCheck, semantics, shaders;
 
   gl = null;
 
@@ -452,23 +452,69 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
     }
   };
 
+  glCheck = function(msg) {
+    if (gl.getError() !== gl.NO_ERROR) {
+      return console.error(msg);
+    }
+  };
+
+  flatten = function(array) {
+    var element, flattened, _i, _len;
+    flattened = [];
+    for (_i = 0, _len = array.length; _i < _len; _i++) {
+      element = array[_i];
+      if (element instanceof Array) {
+        flattened = flattened.concat(flatten(element));
+      } else if (element instanceof vec2) {
+        flattened = flattened.concat([element.x, element.y]);
+      } else {
+        flattened.push(element);
+      }
+    }
+    return flattened;
+  };
+
   Display = (function() {
 
     function Display(context, width, height) {
       this.width = width;
       this.height = height;
       gl = context;
-      this.ready = false;
       this.compilePrograms(shaders);
+      this.coordsArray = [];
+      this.coordsBuffer = gl.createBuffer();
       gl.clearColor(0.9, 0.9, 0.9, 1.0);
+      gl.lineWidth(2);
     }
 
     Display.prototype.render = function() {
-      return gl.clear(gl.COLOR_BUFFER_BIT);
+      var mv, program, proj, stride;
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      if (this.coordsArray.length === 0) {
+        return;
+      }
+      program = this.programs.basic;
+      gl.useProgram(program);
+      gl.uniform4f(program.color, 1, 0, 0, 1);
+      mv = new mat4();
+      proj = new mat4();
+      gl.uniformMatrix4fv(program.modelview, false, mv.elements);
+      gl.uniformMatrix4fv(program.projection, false, proj.elements);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
+      gl.enableVertexAttribArray(semantics.POSITION);
+      gl.vertexAttribPointer(semantics.POSITION, 2, gl.FLOAT, false, stride = 8, 0);
+      gl.drawArrays(gl.POINTS, 0, this.coordsArray.length);
+      return gl.disableVertexAttribArray(semantics.POSITION);
     };
 
     Display.prototype.setPoints = function(pts) {
-      return console.info('points:', pts);
+      var typedArray;
+      this.coordsArray = pts.slice(0);
+      typedArray = new Float32Array(flatten(this.coordsArray));
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW);
+      glCheck("Error when trying to create VBO");
+      return console.info("" + pts.length + " points received: ", typedArray);
     };
 
     Display.prototype.compilePrograms = function(shaders) {
@@ -515,17 +561,16 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
     };
 
     Display.prototype.compileShader = function(names, type) {
-      var handle, name, source, status;
-      source = (function() {
+      var handle, id, source, status;
+      source = ((function() {
         var _i, _len, _results;
         _results = [];
         for (_i = 0, _len = names.length; _i < _len; _i++) {
-          name = names[_i];
-          _results.push($('#' + name).text());
+          id = names[_i];
+          _results.push($('#' + id).text());
         }
         return _results;
-      })();
-      source = source.join();
+      })()).join();
       handle = gl.createShader(type);
       gl.shaderSource(handle, source);
       gl.compileShader(handle);

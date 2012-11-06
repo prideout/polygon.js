@@ -23,7 +23,7 @@
         Ear clipping in Javascript
       </h1>
       <p>
-        Click the WebGL canvas at various points in counter-clockwise order to create a simple polygon.
+        Click the WebGL canvas at various points in <b>counter-clockwise</b> order to create a simple polygon.
         It can be concave if you want!
       </p>
       <p>
@@ -42,9 +42,12 @@
     <script src="bootstrap/js/bootstrap-typeahead.js"></script>
     <script src="js/RequestAnimationFrame.min.js"></script>
     <script src="js/vec2.js"></script>
+    <script src="js/vec3.js"></script>
+    <script src="js/mat3.js"></script>
+    <script src="js/mat4.js"></script>
     <script src="js/main.js"></script>
 
-	<script id="basicvs" type="x-shader/x-vertex">
+    <script id="basicvs" type="x-shader/x-vertex">
       attribute vec4 Position;
       uniform mat4 modelview;
       uniform mat4 projection;
@@ -53,9 +56,9 @@
           vec4 p = Position;
           gl_Position = projection * modelview * p;
       }
-	</script>
+    </script>
 
-	<script id="basicfs" type="x-shader/x-fragment">
+    <script id="basicfs" type="x-shader/x-fragment">
       precision highp float;
       precision highp vec3;
       uniform vec4 color;
@@ -63,7 +66,7 @@
       {
           gl_FragColor = color;
       }
-	</script>
+    </script>
 
   </body>
 </html>
