@@ -431,7 +431,7 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
 require.define("/display.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Display, flatten, gl, glCheck, semantics, shaders;
+  var Display, gl, glCheck, semantics, shaders;
 
   gl = null;
 
@@ -458,22 +458,6 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
     }
   };
 
-  flatten = function(array) {
-    var element, flattened, _i, _len;
-    flattened = [];
-    for (_i = 0, _len = array.length; _i < _len; _i++) {
-      element = array[_i];
-      if (element instanceof Array) {
-        flattened = flattened.concat(flatten(element));
-      } else if (element instanceof vec2) {
-        flattened = flattened.concat([element.x, element.y]);
-      } else {
-        flattened.push(element);
-      }
-    }
-    return flattened;
-  };
-
   Display = (function() {
 
     function Display(context, width, height) {
@@ -481,6 +465,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       this.height = height;
       gl = context;
       this.compilePrograms(shaders);
+      this.loadTextures();
       this.coordsArray = [];
       this.coordsBuffer = gl.createBuffer();
       gl.clearColor(0.9, 0.9, 0.9, 1.0);
@@ -498,6 +483,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       gl.uniform4f(program.color, 1, 0, 0, 1);
       mv = new mat4();
       proj = new mat4();
+      proj.makeOrthographic(0, 600, 0, 600, 0, 1);
       gl.uniformMatrix4fv(program.modelview, false, mv.elements);
       gl.uniformMatrix4fv(program.projection, false, proj.elements);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
@@ -515,6 +501,24 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       gl.bufferData(gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW);
       glCheck("Error when trying to create VBO");
       return console.info("" + pts.length + " points received: ", typedArray);
+    };
+
+    Display.prototype.loadTextures = function() {
+      var tex;
+      tex = gl.createTexture();
+      tex.image = new Image();
+      tex.image.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        glCheck("Load texture");
+        return console.info("prideout texture laoded");
+      };
+      tex.image.src = 'textures/PointSprite.png';
+      return this.pointSprite = tex;
     };
 
     Display.prototype.compilePrograms = function(shaders) {

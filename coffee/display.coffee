@@ -15,23 +15,13 @@ shaders.basic =
     Position: semantics.POSITION
 
 glCheck = (msg) ->
-    console.error(msg) unless gl.getError() == gl.NO_ERROR
-
-flatten = (array) ->
-  flattened = []
-  for element in array
-    if element instanceof Array
-      flattened = flattened.concat flatten element
-    else if element instanceof vec2
-      flattened = flattened.concat [element.x, element.y]
-    else
-      flattened.push element
-  flattened
+  console.error(msg) if gl.getError() isnt gl.NO_ERROR
 
 class Display
   constructor: (context, @width, @height) ->
     gl = context
     @compilePrograms shaders
+    @loadTextures()
     @coordsArray = []
     @coordsBuffer = gl.createBuffer()
     gl.clearColor 0.9, 0.9, 0.9, 1.0
@@ -45,8 +35,12 @@ class Display
     program = @programs.basic
     gl.useProgram program
     gl.uniform4f program.color, 1, 0, 0, 1
+
     mv = new mat4()
+
     proj = new mat4()
+    proj.makeOrthographic(0, 600, 0, 600, 0, 1)
+
     gl.uniformMatrix4fv program.modelview, false, mv.elements
     gl.uniformMatrix4fv program.projection, false, proj.elements
 
@@ -63,6 +57,21 @@ class Display
     gl.bufferData gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
     glCheck "Error when trying to create VBO"
     console.info "#{pts.length} points received: ", typedArray
+
+  loadTextures: ->
+    tex = gl.createTexture()
+    tex.image = new Image()
+    tex.image.onload = ->
+      gl.bindTexture gl.TEXTURE_2D, tex
+      gl.pixelStorei gl.UNPACK_FLIP_Y_WEBGL, true
+      gl.texImage2D gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image
+      gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST
+      gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST
+      gl.bindTexture gl.TEXTURE_2D, null
+      glCheck "Load texture"
+      console.info "prideout texture laoded"
+    tex.image.src = 'textures/PointSprite.png'
+    @pointSprite = tex
 
   compilePrograms: (shaders) ->
     @programs = {}

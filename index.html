@@ -40,7 +40,8 @@
     <script src="js/jquery-1.7.2.min.js"></script>
     <script src="bootstrap/js/bootstrap.js"></script>
     <script src="bootstrap/js/bootstrap-typeahead.js"></script>
-    <script src="js/RequestAnimationFrame.min.js"></script>
+    <script src="js/RequestAnimationFrame.min.js"></script> 
+    <script src="js/util.js"></script>
     <script src="js/vec2.js"></script>
     <script src="js/vec3.js"></script>
     <script src="js/mat3.js"></script>
@@ -55,6 +56,7 @@
       {
           vec4 p = Position;
           gl_Position = projection * modelview * p;
+          gl_PointSize = 10.0;
       }
     </script>
 
@@ -62,9 +64,10 @@
       precision highp float;
       precision highp vec3;
       uniform vec4 color;
+      uniform sampler2D tex;
       void main()
       {
-          gl_FragColor = color;
+          gl_FragColor = color * texture2D(tex, gl_PointCoord);
       }
     </script>
 
