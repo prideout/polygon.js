@@ -36,16 +36,22 @@ class Application
       @pts.push new vec2(x, y)
       return if not @display?
       @display.setPoints @pts
-      # if @pts.length > 1
-      #   lines = @pts.slice 0
-      #   lines.push @pts[0]
-      #   @display.setLines @pts
       # if @pts.length > 2
       #   tris = triangulate @pts
       #   @display.setTris tris
 
+  removePoint: ->
+      return if @pts.length < 1
+      @pts.pop()
+      return if not @display?
+      @display.setPoints @pts
+
   assignEventHandlers: ->
     $(window).resize => @onResize()
+
+    $(document).keydown (e) =>
+      @removePoint() if e.keyCode is 68
+      @nextMode() if e.keyCode is 13
 
     # (0,0) is upper-left corner.
     $('canvas').click (e) =>

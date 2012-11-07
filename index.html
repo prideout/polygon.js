@@ -28,7 +28,10 @@
       </p>
       <p>
         When you're done with the outer contour and ready to add a hole, click
-        <span id="doneButton">here</span>.
+        <span id="doneButton">here</span> or press enter.
+      </p>
+      <p>
+        Press the <b>d</b> key to delete the most recently added point.
       </p>
       <div id="canvasParent">
         <canvas width="600" height="600">
@@ -48,7 +51,7 @@
     <script src="js/mat4.js"></script>
     <script src="js/main.js"></script>
 
-    <script id="basicvs" type="x-shader/x-vertex">
+    <script id="dotvs" type="x-shader/x-vertex">
       attribute vec4 Position;
       uniform mat4 modelview;
       uniform mat4 projection;
@@ -56,11 +59,10 @@
       {
           vec4 p = Position;
           gl_Position = projection * modelview * p;
-          gl_PointSize = 10.0;
+          gl_PointSize = 8.0;
       }
     </script>
-
-    <script id="basicfs" type="x-shader/x-fragment">
+    <script id="dotfs" type="x-shader/x-fragment">
       precision highp float;
       precision highp vec3;
       uniform vec4 color;
@@ -68,6 +70,25 @@
       void main()
       {
           gl_FragColor = color * texture2D(tex, gl_PointCoord);
+      }
+    </script>
+    <script id="contourvs" type="x-shader/x-vertex">
+      attribute vec4 Position;
+      uniform mat4 modelview;
+      uniform mat4 projection;
+      void main(void)
+      {
+          vec4 p = Position;
+          gl_Position = projection * modelview * p;
+      }
+    </script>
+    <script id="contourfs" type="x-shader/x-fragment">
+      precision highp float;
+      precision highp vec3;
+      uniform vec4 color;
+      void main()
+      {
+          gl_FragColor = color;
       }
     </script>
 

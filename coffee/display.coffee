@@ -8,9 +8,15 @@ semantics =
 
 shaders = {}
 
-shaders.basic =
-  vs: ['basicvs']
-  fs: ['basicfs']
+shaders.dot =
+  vs: ['dotvs']
+  fs: ['dotfs']
+  attribs:
+    Position: semantics.POSITION
+
+shaders.contour =
+  vs: ['contourvs']
+  fs: ['contourfs']
   attribs:
     Position: semantics.POSITION
 
@@ -26,28 +32,38 @@ class Display
     @coordsBuffer = gl.createBuffer()
     gl.clearColor 0.9, 0.9, 0.9, 1.0
     gl.lineWidth 2
+    gl.enable gl.BLEND
+    gl.blendFunc gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA
 
   render: ->
     gl.clear gl.COLOR_BUFFER_BIT
-
     return if @coordsArray.length is 0
 
-    program = @programs.basic
-    gl.useProgram program
-    gl.uniform4f program.color, 1, 0, 0, 1
-
     mv = new mat4()
-
     proj = new mat4()
     proj.makeOrthographic(0, 600, 0, 600, 0, 1)
-
-    gl.uniformMatrix4fv program.modelview, false, mv.elements
-    gl.uniformMatrix4fv program.projection, false, proj.elements
 
     gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
     gl.enableVertexAttribArray semantics.POSITION
     gl.vertexAttribPointer semantics.POSITION, 2, gl.FLOAT, false, stride = 8, 0
+
+    if @coordsArray.length > 1
+      program = @programs.contour
+      gl.useProgram program
+      gl.uniform4f program.color, 0, 0.4, 0.8, 1
+      gl.uniformMatrix4fv program.modelview, false, mv.elements
+      gl.uniformMatrix4fv program.projection, false, proj.elements
+      gl.drawArrays gl.LINE_LOOP, 0, @coordsArray.length
+
+    program = @programs.dot
+    gl.useProgram program
+    gl.uniform4f program.color, 0.8, 0, 0, 0.8
+    gl.uniformMatrix4fv program.modelview, false, mv.elements
+    gl.uniformMatrix4fv program.projection, false, proj.elements
+
+    gl.bindTexture gl.TEXTURE_2D, @pointSprite
     gl.drawArrays gl.POINTS, 0, @coordsArray.length
+
     gl.disableVertexAttribArray semantics.POSITION
 
   setPoints: (pts) ->
@@ -55,8 +71,7 @@ class Display
     typedArray = new Float32Array flatten @coordsArray
     gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
     gl.bufferData gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
-    glCheck "Error when trying to create VBO"
-    console.info "#{pts.length} points received: ", typedArray
+    glCheck 'Error when trying to create VBO'
 
   loadTextures: ->
     tex = gl.createTexture()
@@ -65,11 +80,10 @@ class Display
       gl.bindTexture gl.TEXTURE_2D, tex
       gl.pixelStorei gl.UNPACK_FLIP_Y_WEBGL, true
       gl.texImage2D gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image
-      gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST
-      gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST
+      gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR
+      gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR
       gl.bindTexture gl.TEXTURE_2D, null
-      glCheck "Load texture"
-      console.info "prideout texture laoded"
+      glCheck 'Error when loading texture'
     tex.image.src = 'textures/PointSprite.png'
     @pointSprite = tex
 

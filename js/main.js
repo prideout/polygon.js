@@ -405,10 +405,29 @@ require.define("/application.coffee", function (require, module, exports, __dirn
       return this.display.setPoints(this.pts);
     };
 
+    Application.prototype.removePoint = function() {
+      if (this.pts.length < 1) {
+        return;
+      }
+      this.pts.pop();
+      if (!(this.display != null)) {
+        return;
+      }
+      return this.display.setPoints(this.pts);
+    };
+
     Application.prototype.assignEventHandlers = function() {
       var _this = this;
       $(window).resize(function() {
         return _this.onResize();
+      });
+      $(document).keydown(function(e) {
+        if (e.keyCode === 68) {
+          _this.removePoint();
+        }
+        if (e.keyCode === 13) {
+          return _this.nextMode();
+        }
       });
       return $('canvas').click(function(e) {
         var p, x, y;
@@ -444,9 +463,17 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
 
   shaders = {};
 
-  shaders.basic = {
-    vs: ['basicvs'],
-    fs: ['basicfs'],
+  shaders.dot = {
+    vs: ['dotvs'],
+    fs: ['dotfs'],
+    attribs: {
+      Position: semantics.POSITION
+    }
+  };
+
+  shaders.contour = {
+    vs: ['contourvs'],
+    fs: ['contourfs'],
     attribs: {
       Position: semantics.POSITION
     }
@@ -470,6 +497,8 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       this.coordsBuffer = gl.createBuffer();
       gl.clearColor(0.9, 0.9, 0.9, 1.0);
       gl.lineWidth(2);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
 
     Display.prototype.render = function() {
@@ -478,17 +507,26 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       if (this.coordsArray.length === 0) {
         return;
       }
-      program = this.programs.basic;
-      gl.useProgram(program);
-      gl.uniform4f(program.color, 1, 0, 0, 1);
       mv = new mat4();
       proj = new mat4();
       proj.makeOrthographic(0, 600, 0, 600, 0, 1);
-      gl.uniformMatrix4fv(program.modelview, false, mv.elements);
-      gl.uniformMatrix4fv(program.projection, false, proj.elements);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
       gl.enableVertexAttribArray(semantics.POSITION);
       gl.vertexAttribPointer(semantics.POSITION, 2, gl.FLOAT, false, stride = 8, 0);
+      if (this.coordsArray.length > 1) {
+        program = this.programs.contour;
+        gl.useProgram(program);
+        gl.uniform4f(program.color, 0, 0.4, 0.8, 1);
+        gl.uniformMatrix4fv(program.modelview, false, mv.elements);
+        gl.uniformMatrix4fv(program.projection, false, proj.elements);
+        gl.drawArrays(gl.LINE_LOOP, 0, this.coordsArray.length);
+      }
+      program = this.programs.dot;
+      gl.useProgram(program);
+      gl.uniform4f(program.color, 0.8, 0, 0, 0.8);
+      gl.uniformMatrix4fv(program.modelview, false, mv.elements);
+      gl.uniformMatrix4fv(program.projection, false, proj.elements);
+      gl.bindTexture(gl.TEXTURE_2D, this.pointSprite);
       gl.drawArrays(gl.POINTS, 0, this.coordsArray.length);
       return gl.disableVertexAttribArray(semantics.POSITION);
     };
@@ -499,8 +537,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       typedArray = new Float32Array(flatten(this.coordsArray));
       gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW);
-      glCheck("Error when trying to create VBO");
-      return console.info("" + pts.length + " points received: ", typedArray);
+      return glCheck('Error when trying to create VBO');
     };
 
     Display.prototype.loadTextures = function() {
@@ -511,11 +548,10 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.bindTexture(gl.TEXTURE_2D, null);
-        glCheck("Load texture");
-        return console.info("prideout texture laoded");
+        return glCheck('Error when loading texture');
       };
       tex.image.src = 'textures/PointSprite.png';
       return this.pointSprite = tex;
