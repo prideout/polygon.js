@@ -1,4 +1,5 @@
 Display = require './display'
+triangulate = require './earclipping'
 
 class Application
 
@@ -36,9 +37,9 @@ class Application
       @pts.push new vec2(x, y)
       return if not @display?
       @display.setPoints @pts
-      # if @pts.length > 2
-      #   tris = triangulate @pts
-      #   @display.setTris tris
+      if @pts.length > 2
+        indices = triangulate @pts
+        @display.setTriangles indices
 
   removePoint: ->
       return if @pts.length < 1

@@ -3,7 +3,7 @@ fs = require 'fs'
 
 task 'build', 'Build dependencies of main.coffee', ->
   exec(
-    "browserify coffee/main.coffee -v -o js/main.js"
+    "browserify src/main.coffee -v -o js/main.js"
     lastHandler)
 
 task 'checkTest', 'Check the results of the test against baseline', ->
@@ -11,15 +11,10 @@ task 'checkTest', 'Check the results of the test against baseline', ->
     'diff test-baseline.txt test-results.txt'
     lastHandler)
 
-task 'test', 'Build dependencies of test.coffee and execute it', ->
-  exec(
-    'coffee coffee/test.coffee > test-results.txt'
-    nextHandler 'checkTest')
-
 task 'watch', 'Watch prod source files and build changes', ->
   console.log 'Watching for changes...'
   watchFunc = if linux? then fs.watch else fs.watchFile
-  watchFunc "coffee", (curr, prev) ->
+  watchFunc "src", (curr, prev) ->
     if +curr.mtime isnt +prev.mtime
       console.log "Saw change at #{curr.mtime}"
       invoke 'build'

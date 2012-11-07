@@ -346,9 +346,11 @@ exports.extname = function(path) {
 
 require.define("/application.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Application, Display;
+  var Application, Display, triangulate;
 
   Display = require('./display');
+
+  triangulate = require('./earclipping');
 
   Application = (function() {
 
@@ -398,11 +400,16 @@ require.define("/application.coffee", function (require, module, exports, __dirn
     Application.prototype.onResize = function() {};
 
     Application.prototype.onClick = function(x, y) {
+      var indices;
       this.pts.push(new vec2(x, y));
       if (!(this.display != null)) {
         return;
       }
-      return this.display.setPoints(this.pts);
+      this.display.setPoints(this.pts);
+      if (this.pts.length > 2) {
+        indices = triangulate(this.pts);
+        return this.display.setTriangles(indices);
+      }
     };
 
     Application.prototype.removePoint = function() {
@@ -450,7 +457,7 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
 require.define("/display.coffee", function (require, module, exports, __dirname, __filename) {
 (function() {
-  var Display, gl, glCheck, semantics, shaders;
+  var Display, compileProgram, compilePrograms, compileShader, gl, glCheck, loadTexture, semantics, shaders;
 
   gl = null;
 
@@ -479,22 +486,18 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
     }
   };
 
-  glCheck = function(msg) {
-    if (gl.getError() !== gl.NO_ERROR) {
-      return console.error(msg);
-    }
-  };
-
   Display = (function() {
 
     function Display(context, width, height) {
       this.width = width;
       this.height = height;
       gl = context;
-      this.compilePrograms(shaders);
-      this.loadTextures();
+      this.programs = compilePrograms(shaders);
+      this.pointSprite = loadTexture('textures/PointSprite.png');
       this.coordsArray = [];
       this.coordsBuffer = gl.createBuffer();
+      this.indexArray = [];
+      this.indexBuffer = gl.createBuffer();
       gl.clearColor(0.9, 0.9, 0.9, 1.0);
       gl.lineWidth(2);
       gl.enable(gl.BLEND);
@@ -537,95 +540,125 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       typedArray = new Float32Array(flatten(this.coordsArray));
       gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW);
-      return glCheck('Error when trying to create VBO');
+      return glCheck('Error when trying to create points VBO');
     };
 
-    Display.prototype.loadTextures = function() {
-      var tex;
-      tex = gl.createTexture();
-      tex.image = new Image();
-      tex.image.onload = function() {
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        return glCheck('Error when loading texture');
-      };
-      tex.image.src = 'textures/PointSprite.png';
-      return this.pointSprite = tex;
-    };
-
-    Display.prototype.compilePrograms = function(shaders) {
-      var name, shd, _results;
-      this.programs = {};
-      _results = [];
-      for (name in shaders) {
-        shd = shaders[name];
-        _results.push(this.programs[name] = this.compileProgram(shd.vs, shd.fs, shd.attribs));
-      }
-      return _results;
-    };
-
-    Display.prototype.compileProgram = function(vNames, fNames, attribs) {
-      var fShader, key, numUniforms, program, status, u, uniforms, vShader, value, _i, _len;
-      vShader = this.compileShader(vNames, gl.VERTEX_SHADER);
-      fShader = this.compileShader(fNames, gl.FRAGMENT_SHADER);
-      program = gl.createProgram();
-      gl.attachShader(program, vShader);
-      gl.attachShader(program, fShader);
-      for (key in attribs) {
-        value = attribs[key];
-        gl.bindAttribLocation(program, value, key);
-      }
-      gl.linkProgram(program);
-      status = gl.getProgramParameter(program, gl.LINK_STATUS);
-      if (!status) {
-        console.error("Could not link " + vNames + " with " + fNames);
-      }
-      numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
-      uniforms = (function() {
-        var _i, _results;
-        _results = [];
-        for (u = _i = 0; 0 <= numUniforms ? _i < numUniforms : _i > numUniforms; u = 0 <= numUniforms ? ++_i : --_i) {
-          _results.push(gl.getActiveUniform(program, u).name);
-        }
-        return _results;
-      })();
-      for (_i = 0, _len = uniforms.length; _i < _len; _i++) {
-        u = uniforms[_i];
-        program[u] = gl.getUniformLocation(program, u);
-      }
-      return program;
-    };
-
-    Display.prototype.compileShader = function(names, type) {
-      var handle, id, source, status;
-      source = ((function() {
-        var _i, _len, _results;
-        _results = [];
-        for (_i = 0, _len = names.length; _i < _len; _i++) {
-          id = names[_i];
-          _results.push($('#' + id).text());
-        }
-        return _results;
-      })()).join();
-      handle = gl.createShader(type);
-      gl.shaderSource(handle, source);
-      gl.compileShader(handle);
-      status = gl.getShaderParameter(handle, gl.COMPILE_STATUS);
-      if (!status) {
-        console.error(gl.getShaderInfoLog(handle));
-      }
-      return handle;
+    Display.prototype.setTriangles = function(inds) {
+      var typedArray;
+      this.indexArray = inds.slice(0);
+      typedArray = new Int16Array(flatten(this.indexArray));
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW);
+      return glCheck('Error when trying to create index VBO');
     };
 
     return Display;
 
   })();
 
+  glCheck = function(msg) {
+    if (gl.getError() !== gl.NO_ERROR) {
+      return console.error(msg);
+    }
+  };
+
+  compilePrograms = function(shaders) {
+    var name, programs, shd;
+    programs = {};
+    for (name in shaders) {
+      shd = shaders[name];
+      programs[name] = compileProgram(shd.vs, shd.fs, shd.attribs);
+    }
+    return programs;
+  };
+
+  compileProgram = function(vNames, fNames, attribs) {
+    var fShader, key, numUniforms, program, status, u, uniforms, vShader, value, _i, _len;
+    vShader = compileShader(vNames, gl.VERTEX_SHADER);
+    fShader = compileShader(fNames, gl.FRAGMENT_SHADER);
+    program = gl.createProgram();
+    gl.attachShader(program, vShader);
+    gl.attachShader(program, fShader);
+    for (key in attribs) {
+      value = attribs[key];
+      gl.bindAttribLocation(program, value, key);
+    }
+    gl.linkProgram(program);
+    status = gl.getProgramParameter(program, gl.LINK_STATUS);
+    if (!status) {
+      console.error("Could not link " + vNames + " with " + fNames);
+    }
+    numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+    uniforms = (function() {
+      var _i, _results;
+      _results = [];
+      for (u = _i = 0; 0 <= numUniforms ? _i < numUniforms : _i > numUniforms; u = 0 <= numUniforms ? ++_i : --_i) {
+        _results.push(gl.getActiveUniform(program, u).name);
+      }
+      return _results;
+    })();
+    for (_i = 0, _len = uniforms.length; _i < _len; _i++) {
+      u = uniforms[_i];
+      program[u] = gl.getUniformLocation(program, u);
+    }
+    return program;
+  };
+
+  compileShader = function(names, type) {
+    var handle, id, source, status;
+    source = ((function() {
+      var _i, _len, _results;
+      _results = [];
+      for (_i = 0, _len = names.length; _i < _len; _i++) {
+        id = names[_i];
+        _results.push($('#' + id).text());
+      }
+      return _results;
+    })()).join();
+    handle = gl.createShader(type);
+    gl.shaderSource(handle, source);
+    gl.compileShader(handle);
+    status = gl.getShaderParameter(handle, gl.COMPILE_STATUS);
+    if (!status) {
+      console.error(gl.getShaderInfoLog(handle));
+    }
+    return handle;
+  };
+
+  loadTexture = function(filename) {
+    var tex;
+    tex = gl.createTexture();
+    tex.image = new Image();
+    tex.image.onload = function() {
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tex.image);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      return glCheck('Error when loading texture');
+    };
+    tex.image.src = filename;
+    return tex;
+  };
+
   module.exports = Display;
+
+}).call(this);
+
+});
+
+require.define("/earclipping.coffee", function (require, module, exports, __dirname, __filename) {
+(function() {
+  var triangulate;
+
+  triangulate = function(pts) {
+    var indices;
+    indices = [];
+    return indices;
+  };
+
+  module.exports = triangulate;
 
 }).call(this);
 
