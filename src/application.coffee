@@ -33,19 +33,19 @@ class Application
   onResize: ->
     #tbd
 
+  injectPoints: ->
+    @display.setPoints @pts
+    indices = triangulate @pts
+    @display.setTriangles indices
+
   onClick: (x, y) ->
       @pts.push new vec2(x, y)
-      return if not @display?
-      @display.setPoints @pts
-      if @pts.length > 2
-        indices = triangulate @pts
-        @display.setTriangles indices
+      @injectPoints() if @display?
 
   removePoint: ->
       return if @pts.length < 1
       @pts.pop()
-      return if not @display?
-      @display.setPoints @pts
+      @injectPoints() if @display?
 
   assignEventHandlers: ->
     $(window).resize => @onResize()

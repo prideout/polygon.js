@@ -1,6 +1,7 @@
 ab = new vec2();  bc = new vec2()
 ca = new vec2();  ap = new vec2()
 bp = new vec2();  cp = new vec2()
+ac = new vec2();
 
 # POINT IN TRIANGLE
 #
@@ -23,6 +24,12 @@ pointInTri = (p, tri) ->
   return true if a > 0 and b > 0 and c > 0
   false
 
+# Returns true if the angle at b is > 180
+isReflex = (a, b, c) ->
+  ac.sub c, a
+  ab.sub b, a
+  0 < ac.cross ab
+
 # MAIN EAR CLIPPING ALGORITHM
 #
 # This is an n-squared algorithm but at least
@@ -30,7 +37,12 @@ pointInTri = (p, tri) ->
 #
 triangulate = (pts) ->
 
-  # First find all reflex verts
+  # First handle the trivial cases.
+  return [] if pts.length < 3
+  if pts.length is 3
+    return [0, 1, 2]
+
+  # Next, find all reflex verts.
   reflex = []
   concave = []
   for b, ncurr in pts
@@ -38,12 +50,12 @@ triangulate = (pts) ->
     nnext = (ncurr + 1) % pts.length
     a = pts[nprev]
     c = pts[nnext]
-    ab.sub b, a
-    bc.sub c, a
-    ca.sub a, c
-    reflex.push ncurr
+    if isReflex a, b, c
+      reflex.push ncurr
+    else
+      concave.push ncurr
 
-  # Next find all ears.
+  # Now find all the initial ears.
   ears = []
   for ncurr in reflex
     nprev = (ncurr + pts.length - 1) % pts.length
