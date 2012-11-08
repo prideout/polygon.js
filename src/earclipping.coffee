@@ -24,49 +24,46 @@ pointInTri = (p, tri) ->
   return true if a > 0 and b > 0 and c > 0
   false
 
-# Takes three coordinates, returns true if the angle at
-# the second coordinate is > 180
-isReflexCoord = (a, b, c) ->
+# IS REFLEX ANGLE
+#
+# Takes three coordinates that form a caret shape.
+# Returns true if the caret angle > 180.
+#
+isReflexAngle = (a, b, c) ->
   ac.sub c, a
   ab.sub b, a
   0 > ac.cross ab
 
-# Takes an index and a point list, returns true if the angle
-# at the given index is > 180
-isReflexIndex = (ncurr, coords) ->
-  nprev = (ncurr + coords.length - 1) % coords.length
-  nnext = (ncurr + 1) % coords.length
-  a = coords[nprev]
-  b = coords[ncurr]
-  c = coords[nnext]
-  return isReflexCoord a, b, c
-
 # MAIN EAR CLIPPING ALGORITHM
 #
-# This is an n-squared algorithm but at least
-# it's nice and simple.
+# This is an n-squared algorithm; much better algorithms exist.
+#
+# TODO remove all calls to indexOf by creating maps
+#
+# coords  ... coordinate list representing the original polygon.
+# polygon ... index list into original polygon; represents the clipped polygon.
+# reflex  ... index list into original polygon for angles > 180 degrees.
+# ncurr, nprev, nnext ... current/previous/next indices into 'coords'
+# pcurr, pprev, pnext ... current/previous/next indices into 'polygon'
 #
 triangulate = (coords) ->
 
-  # First handle the trivial cases.
+  # First handle the degenerate and trivial cases.
   return [] if coords.length < 3
   if coords.length is 3
     return [0, 1, 2]
 
-  # Next, find all reflex verts.
+  # Define a function that checks if a vert is an ear.  Ears are convex verts that form
+  # triangles with their neighbors such that the triangle does not contain any other verts.
+  # This is a n-squared operation.
   reflex = []
-  concave = []
-  for b, ncurr in coords
-    if isReflexIndex ncurr
-      reflex.push ncurr
-    else
-      concave.push ncurr
-
-  # Now find all the initial ears.
-  ears = []
-  for ncurr in concave
-    nprev = (ncurr + coords.length - 1) % coords.length
-    nnext = (ncurr + 1) % coords.length
+  polygon = [0...(coords.length)]
+  checkEar = (ncurr) ->
+    pcurr = polygon.indexOf ncurr
+    pprev = (pcurr + polygon.length - 1) % polygon.length
+    pnext = (pcurr + 1) % polygon.length
+    nprev = polygon[pprev]
+    nnext = polygon[pnext]
     triangle = [nprev, ncurr, nnext]
     tricoords = (coords[i] for i in triangle)
     isEar = true
@@ -76,53 +73,52 @@ triangulate = (coords) ->
       if pointInTri ocoord, tricoords
         isEar = false
         break
-    if isEar
-      ears.push ncurr
+    isEar
 
-  # Remove ears one by one.
-  # If the neighbor is convex, it remains convex.
-  # If the neighbor is an ear, it might not stay an ear.
-  # If the neighbor is reflex, it might become convex and possibly and ear.
+  # Returns true if the angle at the given index is > 180
+  isReflexIndex = (ncurr) ->
+    pcurr = polygon.indexOf ncurr
+    pprev = (pcurr + polygon.length - 1) % polygon.length
+    pnext = (pcurr + 1) % polygon.length
+    nprev = polygon[pprev]
+    nnext = polygon[pnext]
+    a = coords[nprev]
+    b = coords[ncurr]
+    c = coords[nnext]
+    return isReflexAngle a, b, c
+
+  # Next, find all reflex verts.
+  # We create two variable sized lists to allow quick travel between reflex verts.
+  # We also create a fixed-sized "reflexMap" to quickly determine the position of
+  # a given vert in the reflex list (an index of -1 indicates concavity).
+  concave = []
+  reflexMap = []
+  for b, ncurr in coords
+    if isReflexIndex ncurr
+      reflexMap.push reflex.length
+      reflex.push ncurr
+    else
+      reflexMap.push -1
+      concave.push ncurr
+
+  # Now find all the initial ears, which are verts that form triangles that
+  # don't contain any other verts.  This is a n-squared operation.
+  ears = []
+  for ncurr in concave
+    if checkEar ncurr
+      ears.push ncurr
 
   console.info "prideout"
   console.info "prideout ears    #{ears}"
   console.info "prideout reflex  #{reflex}"
   console.info "prideout concave #{concave}"
 
-  triangles = []
-  indices = [0...(coords.length)]
+  # Remove ears, one by one.  Removing an ear changes the configuration as follows:
+  #  - If the neighbor is convex, it remains convex.
+  #  - If the neighbor is an ear, it might not stay an ear.
+  #  - If the neighbor is reflex, it might become convex and possibly and ear.
 
-  while triangles.length < coords.length - 2
-    if ears.length is 0
-      console.info 'the universe has imploded'
-      return triangles
-    ncurr = ears.pop()
-    nprev = (ncurr + coords.length - 1) % coords.length
-    nnext = (ncurr + 1) % coords.length
-    triangles.push [nprev, ncurr, nnext]
-
-    for adj in [nprev, nnext]
-      testEar = false
-      if (adj in reflex) and (not isReflexIndex adj, coords)
-        reflex.splice (reflex.indexOf adj), 1
-        testEar = true
-      if testEar or not (adj in reflex)
-        nprev = (ncurr + coords.length - 1) % coords.length
-        nnext = (ncurr + 1) % coords.length
-        triangle = [nprev, ncurr, nnext]
-        tricoords = (coords[i] for i in triangle)
-        isEar = true
-        for oindex in reflex
-          continue if oindex in triangle
-          ocoord = coords[oindex]
-          if pointInTri ocoord, tricoords
-            isEar = false
-            break
-        if isEar
-          ears.push ncurr
-
-
-
-  triangles
+  resultingTris = []
+  resultingTris
 
 module.exports = triangulate
