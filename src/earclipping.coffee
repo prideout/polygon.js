@@ -89,18 +89,18 @@ triangulate = (coords) ->
     return isReflexAngle a, b, c
 
   # Next, find all reflex verts.
-  concave = []
+  convex = []
   for b, ncurr in coords
     if isReflexIndex ncurr
       reflex.push true
     else
       reflex.push false
-      concave.push ncurr
+      convex.push ncurr
 
   # Now find all the initial ears, which are verts that form triangles that
   # don't contain any other verts.  This is a n-squared operation.
   ears = []
-  for ncurr in concave
+  for ncurr in convex
     if checkEar ncurr
       ears.push ncurr
 
@@ -108,7 +108,7 @@ triangulate = (coords) ->
   console.info ""
   console.info "ears    #{ears}"
   console.info "reflex  #{reflex}"
-  console.info "concave #{concave}"
+  console.info "convex  #{convex}"
 
   # Remove ears, one by one.
   triangles = []
