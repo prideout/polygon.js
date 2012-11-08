@@ -56,12 +56,15 @@ class Display
 
     program = @programs.dot
     gl.useProgram program
-    gl.uniform4f program.color, 0.8, 0, 0, 0.8
     gl.uniformMatrix4fv program.modelview, false, mv.elements
     gl.uniformMatrix4fv program.projection, false, proj.elements
 
     gl.bindTexture gl.TEXTURE_2D, @pointSprite
-    gl.drawArrays gl.POINTS, 0, @coordsArray.length
+    gl.uniform4f program.color, 0, 0, 0, 0.8
+    gl.drawArrays gl.POINTS, 0, 1
+    if @coordsArray.length > 1
+      gl.uniform4f program.color, 0.8, 0, 0, 0.8
+      gl.drawArrays gl.POINTS, 1, @coordsArray.length - 1
 
     gl.disableVertexAttribArray semantics.POSITION
 

@@ -42,7 +42,7 @@ isReflexAngle = (a, b, c) ->
 #
 # coords  ... coordinate list representing the original polygon.
 # polygon ... index list into original polygon; represents the clipped polygon.
-# reflex  ... index list into original polygon for angles > 180 degrees.
+# reflex  ... boolean list for reflex angles; one entry per original vertex
 # ncurr, nprev, nnext ... current/previous/next indices into 'coords'
 # pcurr, pprev, pnext ... current/previous/next indices into 'polygon'
 #
@@ -67,8 +67,9 @@ triangulate = (coords) ->
     triangle = [nprev, ncurr, nnext]
     tricoords = (coords[i] for i in triangle)
     isEar = true
-    for oindex in reflex
+    for oindex in polygon
       continue if oindex in triangle
+      continue if not reflex[oindex]
       ocoord = coords[oindex]
       if pointInTri ocoord, tricoords
         isEar = false
@@ -88,17 +89,12 @@ triangulate = (coords) ->
     return isReflexAngle a, b, c
 
   # Next, find all reflex verts.
-  # We create two variable sized lists to allow quick travel between reflex verts.
-  # We also create a fixed-sized "reflexMap" to quickly determine the position of
-  # a given vert in the reflex list (an index of -1 indicates concavity).
   concave = []
-  reflexMap = []
   for b, ncurr in coords
     if isReflexIndex ncurr
-      reflexMap.push reflex.length
-      reflex.push ncurr
+      reflex.push true
     else
-      reflexMap.push -1
+      reflex.push false
       concave.push ncurr
 
   # Now find all the initial ears, which are verts that form triangles that
@@ -108,17 +104,52 @@ triangulate = (coords) ->
     if checkEar ncurr
       ears.push ncurr
 
-  console.info "prideout"
-  console.info "prideout ears    #{ears}"
-  console.info "prideout reflex  #{reflex}"
-  console.info "prideout concave #{concave}"
+  # Diagnostic output.
+  console.info ""
+  console.info "ears    #{ears}"
+  console.info "reflex  #{reflex}"
+  console.info "concave #{concave}"
 
-  # Remove ears, one by one.  Removing an ear changes the configuration as follows:
-  #  - If the neighbor is convex, it remains convex.
-  #  - If the neighbor is an ear, it might not stay an ear.
-  #  - If the neighbor is reflex, it might become convex and possibly and ear.
+  # Remove ears, one by one.
+  triangles = []
+  while triangles.length < coords.length - 2
 
-  resultingTris = []
-  resultingTris
+    # Computational geometry theory says this is impossible.
+    if ears.length is 0
+      console.error 'internal error in ear clipping algorithm'
+      return triangles
+
+    # Remove the index from the ear list.
+    ncurr = ears.pop()
+
+    # Insert the ear into the triangle list that we're building.
+    rcurr = polygon.indexOf ncurr
+    rprev = (rcurr + polygon.length - 1) % polygon.length
+    rnext = (rcurr + 1) % polygon.length
+    nprev = polygon[rprev]
+    nnext = polygon[rnext]
+    triangles.push [nprev, ncurr, nnext]
+
+    # Remove the index from the remaining polygon.
+    polygon.splice rcurr, 1
+
+    # Removing an ear changes the configuration as follows:
+    #  - If the neighbor is convex, it remains convex and might become an ear.
+    #  - If the neighbor is an ear, it might not stay an ear.
+    #  - If the neighbor is reflex, it might become convex and possibly an ear.
+    for adj in [nprev, nnext]
+      if reflex[adj] and (not isReflexIndex adj)
+        reflex[adj] = false
+      if not reflex[adj]
+        isEar = checkEar adj
+        earIndex = ears.indexOf adj
+        wasEar = earIndex isnt -1
+        if isEar and not wasEar
+          ears.push adj
+        else if not isEar and wasEar
+          ears.splice earIndex, 1
+
+  console.info "triangles #{triangles}"
+  triangles
 
 module.exports = triangulate
