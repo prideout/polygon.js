@@ -65,6 +65,11 @@ class Display
       gl.useProgram program
       gl.uniform4f program.color, 0, 0.4, 0.8, 1
       gl.drawArrays gl.LINE_LOOP, 0, @coordsArray.length
+      if @highlightEdge > -1
+        gl.lineWidth 4
+        gl.uniform4f program.color, 0, 0, 0, 1
+        gl.drawArrays gl.LINES, @highlightEdge, 2
+        gl.lineWidth 2
 
     program = @programs.dot
     gl.useProgram program
@@ -86,18 +91,11 @@ class Display
       gl.uniform4f program.color, 0, 0, 0, 1
       gl.drawArrays gl.POINTS, @highlightPoint, 1
 
-    if @highlightEdge > -1
-      program = @programs.contour
-      gl.useProgram program
-      gl.lineWidth 6
-      gl.uniform4f program.color, 0, 0, 0, 1
-      gl.drawArrays gl.LINES, @highlightEdge, 2
-      gl.lineWidth 2
-
     gl.disableVertexAttribArray semantics.POSITION
 
   setPoints: (pts) ->
     @coordsArray = pts.slice 0
+    return if not @coordsArray.length
     flattened = flatten @coordsArray
     flattened.push pts[0].x
     flattened.push pts[0].y

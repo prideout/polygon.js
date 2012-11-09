@@ -56,6 +56,7 @@ class Application
       dragItem = { offset: new vec2(), index: v }
       dragItem.offset.sub @pts[v], mouse
       @dragList = [dragItem]
+      $('canvas').css {cursor : 'none'}
       return
     e = @getEdge x, y
     return if e is -1
@@ -65,12 +66,14 @@ class Application
     a.offset.sub @pts[a.index], mouse
     b.offset.sub @pts[b.index], mouse
     @dragList = [a, b]
+    $('canvas').css {cursor: 'none'}
 
   onUp: (x, y) ->
     mouse = new vec2(x, y)
     if not @dragList.length
       @pts.push mouse
     else
+      $('canvas').css {cursor: 'default'}
       for item in @dragList
         @pts[item.index].add item.offset, mouse
       @dragList = []
@@ -97,14 +100,28 @@ class Application
     @display.setPoints @pts
     @display.setTriangles (triangulate @pts)
 
+  circlify: ->
+    @pts.push new vec2(0, 0)
+    dtheta = 2 * Math.PI / @pts.length
+    theta = 0
+    for pt in @pts
+      pt.x = 300 + 200 * Math.cos theta
+      pt.y = 300 - 200 * Math.sin theta
+      theta = theta + dtheta
+    @display.setPoints @pts
+    @display.setTriangles (triangulate @pts)
+
   assignEventHandlers: ->
     $(window).resize => @onResize()
     c = $('canvas')
     c.mousemove (e) => @onMove e.offsetX, e.offsetY
-    c.mousedown (e) => @onDown e.offsetX, e.offsetY
+    c.mousedown (e) =>
+      @onDown e.offsetX, e.offsetY
+      e.originalEvent.preventDefault()
     c.mouseup (e) => @onUp e.offsetX, e.offsetY
-    $(document).keydown (e) =>
-      @removePoint() if e.keyCode is 68
+    $(document).keyup (e) =>
+      @removePoint() if String.fromCharCode(e.keyCode) is 'D'
+      @circlify() if String.fromCharCode(e.keyCode) is 'C'
       @nextMode() if e.keyCode is 13
 
 module.exports = Application
