@@ -48,16 +48,23 @@ class Display
     gl.enableVertexAttribArray semantics.POSITION
     gl.vertexAttribPointer semantics.POSITION, 2, gl.FLOAT, false, stride = 8, 0
 
+    program = @programs.contour
+    gl.useProgram program
+    gl.uniformMatrix4fv program.modelview, false, mv.elements
+    gl.uniformMatrix4fv program.projection, false, proj.elements
+
+    if @indexArray.length > 0
+      program = @programs.contour
+      gl.useProgram program
+      gl.uniform4f program.color, 0.25, 0.25, 0, 0.5
+      gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @indexBuffer
+      gl.drawElements gl.TRIANGLES, 3 * @indexArray.length, gl.UNSIGNED_SHORT, 0
+
     if @coordsArray.length > 1
       program = @programs.contour
       gl.useProgram program
       gl.uniform4f program.color, 0, 0.4, 0.8, 1
-      gl.uniformMatrix4fv program.modelview, false, mv.elements
-      gl.uniformMatrix4fv program.projection, false, proj.elements
       gl.drawArrays gl.LINE_LOOP, 0, @coordsArray.length
-      if @highlightEdge > -1
-        gl.uniform4f program.color, 1, 1, 0, 0.5
-        gl.drawArrays gl.LINES, @highlightEdge, 2
 
     program = @programs.dot
     gl.useProgram program
@@ -66,26 +73,26 @@ class Display
     gl.uniform1f program.pointSize, 8
 
     gl.bindTexture gl.TEXTURE_2D, @pointSprite
-    gl.uniform4f program.color, 0, 0, 0, 0.8
+    gl.uniform4f program.color, 0.7, 0.2, 0.2, 1
     gl.drawArrays gl.POINTS, 0, 1
     if @coordsArray.length > 1
-      gl.uniform4f program.color, 0.8, 0, 0, 0.8
+      gl.uniform4f program.color, 0, 0, 0, 1
       gl.drawArrays gl.POINTS, 1, @coordsArray.length - 1
 
     if @highlightPoint > -1
-      gl.uniform1f program.pointSize, 12
-      gl.uniform4f program.color, 0, 0, 0, 0.5
-      gl.drawArrays gl.POINTS, @highlightPoint, 1
-      gl.uniform1f program.pointSize, 8
-      gl.uniform4f program.color, 1, 1, 0, 0.5
+      program = @programs.dot
+      gl.useProgram program
+      gl.uniform1f program.pointSize, 14
+      gl.uniform4f program.color, 0, 0, 0, 1
       gl.drawArrays gl.POINTS, @highlightPoint, 1
 
-    if @indexArray.length > 0
+    if @highlightEdge > -1
       program = @programs.contour
       gl.useProgram program
-      gl.uniform4f program.color, 0.25, 0.25, 0, 0.5
-      gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @indexBuffer
-      gl.drawElements gl.TRIANGLES, 3 * @indexArray.length, gl.UNSIGNED_SHORT, 0
+      gl.lineWidth 6
+      gl.uniform4f program.color, 0, 0, 0, 1
+      gl.drawArrays gl.LINES, @highlightEdge, 2
+      gl.lineWidth 2
 
     gl.disableVertexAttribArray semantics.POSITION
 

@@ -71,9 +71,13 @@ class Application
     @display.setTriangles (triangulate @pts)
 
   onMove: (x, y) ->
-    @display.highlightEdge = @getEdge x, y
-    @display.highlightPoint = @getVertex x, y
-    return if not @dragList.length
+    if not @dragList.length
+      @display.highlightPoint = @getVertex x, y
+      if @display.highlightPoint isnt -1
+        @display.highlightEdge = -1
+      else
+        @display.highlightEdge = @getEdge x, y
+      return
     mouse = new vec2(x, y)
     for item in @dragList
       @pts[item.index].add item.offset, mouse
