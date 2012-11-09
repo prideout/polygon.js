@@ -40,6 +40,15 @@ class Application
       return i if d < 25
     -1
 
+  getEdge: (x, y) ->
+    p = new vec2(x, y)
+    for pt, i in @pts
+      v = @pts[i]
+      w = @pts[(i+1) % @pts.length]
+      d = distToSegmentSquared p, v, w
+      return i if d < 25
+    -1
+
   onDown: (x, y) ->
     v = @getVertex x, y
     return if v is -1
@@ -62,6 +71,7 @@ class Application
     @display.setTriangles (triangulate @pts)
 
   onMove: (x, y) ->
+    @display.highlightEdge = @getEdge x, y
     @display.highlightPoint = @getVertex x, y
     return if not @dragList.length
     mouse = new vec2(x, y)

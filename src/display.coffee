@@ -91,7 +91,11 @@ class Display
 
   setPoints: (pts) ->
     @coordsArray = pts.slice 0
-    typedArray = new Float32Array flatten @coordsArray
+    flattened = flatten @coordsArray
+    flattened.push pts[0].x
+    flattened.push pts[0].y
+    flattened.push pts[0].z
+    typedArray = new Float32Array flattened
     gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
     gl.bufferData gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
     glCheck 'Error when trying to create points VBO'
