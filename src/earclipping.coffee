@@ -1,7 +1,7 @@
 # TRIANGULATION OF SIMPLE POLYGONS VIA EAR CLIPPING
 #
-# This is the n-squared algorithm described by David Eberly.  While much better
-# algorithms exist for polygon triangulation, this is fairly simple.
+# This is the n-squared algorithm described by David Eberly.  While faster
+# algorithms exist for polygon triangulation, this one is easy to follow.
 #
 # coords  ... coordinate list representing the original polygon.
 # polygon ... index list into original polygon; represents the clipped polygon.
@@ -35,7 +35,6 @@ triangulate = (coords) ->
 
   # Checks if a vert is an ear.  Ears are convex verts that form
   # triangles with their neighbors such that the triangle does not contain any other verts.
-  # This is a n-squared operation.
   checkEar = (ncurr) ->
     [nprev, nnext] = getNeighbors ncurr
     triangle = [nprev, ncurr, nnext]
