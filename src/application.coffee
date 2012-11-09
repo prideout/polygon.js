@@ -4,7 +4,7 @@ triangulate = require './earclipping'
 class Application
   constructor: ->
     @pts = []
-    @dragVertex = -1
+    @dragList = []
     if @initDisplay()
       @assignEventHandlers()
       @requestAnimationFrame()
@@ -42,22 +42,31 @@ class Application
 
   onDown: (x, y) ->
     v = @getVertex x, y
-    if v > -1
-      @dragVertex = v
+    return if v is -1
+    dragItem =
+      offset: new vec2()
+      index: v
+    mouse = new vec2(x, y)
+    dragItem.offset.sub @pts[v], mouse
+    @dragList = [dragItem]
 
   onUp: (x, y) ->
-    if @dragVertex is -1
-      @pts.push new vec2(x, y)
+    mouse = new vec2(x, y)
+    if not @dragList.length
+      @pts.push mouse
     else
-      @pts[@dragVertex] = new vec2(x, y)
-      @dragVertex = -1
+      for item in @dragList
+        @pts[item.index].add item.offset, mouse
+      @dragList = []
     @display.setPoints @pts
     @display.setTriangles (triangulate @pts)
 
   onMove: (x, y) ->
     @display.highlightPoint = @getVertex x, y
-    return if @dragVertex is -1
-    @pts[@dragVertex] = new vec2(x, y)
+    return if not @dragList.length
+    mouse = new vec2(x, y)
+    for item in @dragList
+      @pts[item.index].add item.offset, mouse
     @display.setPoints @pts
     @display.setTriangles (triangulate @pts)
 
