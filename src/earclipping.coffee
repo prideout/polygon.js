@@ -51,7 +51,7 @@ triangulate = (coords) ->
   # First handle the degenerate and trivial cases.
   return [] if coords.length < 3
   if coords.length is 3
-    return [0, 1, 2]
+    return [[0, 1, 2]]
 
   # Define a function that checks if a vert is an ear.  Ears are convex verts that form
   # triangles with their neighbors such that the triangle does not contain any other verts.
@@ -149,7 +149,6 @@ triangulate = (coords) ->
         else if not isEar and wasEar
           ears.splice earIndex, 1
 
-  console.info "triangles #{triangles}"
   triangles
 
 module.exports = triangulate

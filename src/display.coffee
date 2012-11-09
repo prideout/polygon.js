@@ -66,6 +66,13 @@ class Display
       gl.uniform4f program.color, 0.8, 0, 0, 0.8
       gl.drawArrays gl.POINTS, 1, @coordsArray.length - 1
 
+    if @indexArray.length > 0
+      program = @programs.contour
+      gl.useProgram program
+      gl.uniform4f program.color, 0.25, 0.25, 0, 0.5
+      gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @indexBuffer
+      gl.drawElements gl.TRIANGLES, 3 * @indexArray.length, gl.UNSIGNED_SHORT, 0
+
     gl.disableVertexAttribArray semantics.POSITION
 
   setPoints: (pts) ->
@@ -77,7 +84,7 @@ class Display
 
   setTriangles: (inds) ->
     @indexArray = inds.slice 0
-    typedArray = new Int16Array flatten @indexArray
+    typedArray = new Uint16Array flatten @indexArray
     gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @indexBuffer
     gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
     glCheck 'Error when trying to create index VBO'
