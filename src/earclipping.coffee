@@ -3,6 +3,8 @@ ca = new vec2();  ap = new vec2()
 bp = new vec2();  cp = new vec2()
 ac = new vec2();
 
+verbose = false
+
 # POINT IN TRIANGLE
 #
 # Walk around the edges and determine if
@@ -105,10 +107,11 @@ triangulate = (coords) ->
       ears.push ncurr
 
   # Diagnostic output.
-  console.info ""
-  console.info "ears    #{ears}"
-  console.info "reflex  #{reflex}"
-  console.info "convex  #{convex}"
+  if verbose
+    console.info ""
+    console.info "ears    #{ears}"
+    console.info "reflex  #{reflex}"
+    console.info "convex  #{convex}"
 
   # Remove ears, one by one.
   triangles = []

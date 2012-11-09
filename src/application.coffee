@@ -2,9 +2,9 @@ Display = require './display'
 triangulate = require './earclipping'
 
 class Application
-
   constructor: ->
     @pts = []
+    @dragVertex = -1
     if @initDisplay()
       @assignEventHandlers()
       @requestAnimationFrame()
@@ -33,39 +33,48 @@ class Application
   onResize: ->
     #tbd
 
-  injectPoints: ->
-    @display.setPoints @pts
-    indices = triangulate @pts
-    @display.setTriangles indices
-
-  onClick: (x, y) ->
-    @pts.push new vec2(x, y)
-    @injectPoints() if @display?
-
-  onMove: (x, y) ->
+  getVertex: (x, y) ->
     p = new vec2(x, y)
-    @display.highlightPoint = -1
     for pt, i in @pts
       d = pt.distanceToSquared p
-      if d < 25
-        @display.highlightPoint = i
+      return i if d < 25
+    -1
+
+  onDown: (x, y) ->
+    v = @getVertex x, y
+    if v > -1
+      @dragVertex = v
+
+  onUp: (x, y) ->
+    if @dragVertex is -1
+      @pts.push new vec2(x, y)
+    else
+      @pts[@dragVertex] = new vec2(x, y)
+      @dragVertex = -1
+    @display.setPoints @pts
+    @display.setTriangles (triangulate @pts)
+
+  onMove: (x, y) ->
+    @display.highlightPoint = @getVertex x, y
+    return if @dragVertex is -1
+    @pts[@dragVertex] = new vec2(x, y)
+    @display.setPoints @pts
+    @display.setTriangles (triangulate @pts)
 
   removePoint: ->
     return if @pts.length < 1
     @pts.pop()
-    @injectPoints()
+    @display.setPoints @pts
+    @display.setTriangles (triangulate @pts)
 
   assignEventHandlers: ->
     $(window).resize => @onResize()
-
+    c = $('canvas')
+    c.mousemove (e) => @onMove e.offsetX, e.offsetY
+    c.mousedown (e) => @onDown e.offsetX, e.offsetY
+    c.mouseup (e) => @onUp e.offsetX, e.offsetY
     $(document).keydown (e) =>
       @removePoint() if e.keyCode is 68
       @nextMode() if e.keyCode is 13
-
-    $('canvas').click (e) =>
-      @onClick e.offsetX, e.offsetY
-
-    $('canvas').mousemove (e) =>
-      @onMove e.offsetX, e.offsetY
 
 module.exports = Application
