@@ -1,44 +1,7 @@
-ab = new vec2();  bc = new vec2()
-ca = new vec2();  ap = new vec2()
-bp = new vec2();  cp = new vec2()
-ac = new vec2();
-
-verbose = false
-
-# POINT IN TRIANGLE
+# TRIANGULATION OF SIMPLE POLYGONS VIA EAR CLIPPING
 #
-# Walk around the edges and determine if
-# p is to the left or right of each edge.
-# If the answer is the same for all 3 edges,
-# then the point is inside.
-#
-pointInTri = (p, tri) ->
-  ab.sub tri[1], tri[0]
-  bc.sub tri[2], tri[1]
-  ca.sub tri[0], tri[2]
-  ap.sub p, tri[0]
-  bp.sub p, tri[1]
-  cp.sub p, tri[2]
-  a = ab.cross ap
-  b = bc.cross bp
-  c = ca.cross cp
-  return true if a < 0 and b < 0 and c < 0
-  return true if a > 0 and b > 0 and c > 0
-  false
-
-# IS REFLEX ANGLE
-#
-# Takes three coordinates that form a caret shape.
-# Returns true if the caret angle > 180.
-#
-isReflexAngle = (a, b, c) ->
-  ac.sub c, a
-  ab.sub b, a
-  0 > ac.cross ab
-
-# MAIN EAR CLIPPING ALGORITHM
-#
-# This is an n-squared algorithm; much better algorithms exist.
+# This is the n-squared algorithm described by David Eberly.  While much better
+# algorithms exist for polygon triangulation, this is fairly simple.
 #
 # coords  ... coordinate list representing the original polygon.
 # polygon ... index list into original polygon; represents the clipped polygon.
@@ -151,5 +114,42 @@ triangulate = (coords) ->
           ears.splice earIndex, 1
 
   triangles
+
+verbose = false
+ab = new vec2();  bc = new vec2()
+ca = new vec2();  ap = new vec2()
+bp = new vec2();  cp = new vec2()
+ac = new vec2();
+
+# POINT IN TRIANGLE
+#
+# Walk around the edges and determine if
+# p is to the left or right of each edge.
+# If the answer is the same for all 3 edges,
+# then the point is inside.
+#
+pointInTri = (p, tri) ->
+  ab.sub tri[1], tri[0]
+  bc.sub tri[2], tri[1]
+  ca.sub tri[0], tri[2]
+  ap.sub p, tri[0]
+  bp.sub p, tri[1]
+  cp.sub p, tri[2]
+  a = ab.cross ap
+  b = bc.cross bp
+  c = ca.cross cp
+  return true if a < 0 and b < 0 and c < 0
+  return true if a > 0 and b > 0 and c > 0
+  false
+
+# IS REFLEX ANGLE
+#
+# Takes three coordinates that form a caret shape.
+# Returns true if the caret angle > 180.
+#
+isReflexAngle = (a, b, c) ->
+  ac.sub c, a
+  ab.sub b, a
+  0 > ac.cross ab
 
 module.exports = triangulate
