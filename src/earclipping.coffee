@@ -40,32 +40,41 @@ isReflexAngle = (a, b, c) ->
 #
 # This is an n-squared algorithm; much better algorithms exist.
 #
-# TODO remove all calls to indexOf by creating maps
-#
 # coords  ... coordinate list representing the original polygon.
 # polygon ... index list into original polygon; represents the clipped polygon.
+# clipmap ... maps from an "original" index to an index into the clipped polygon.
 # reflex  ... boolean list for reflex angles; one entry per original vertex
 # ncurr, nprev, nnext ... current/previous/next indices into 'coords'
 # pcurr, pprev, pnext ... current/previous/next indices into 'polygon'
 #
 triangulate = (coords) ->
 
-  # First handle the degenerate and trivial cases.
+  # Return early for degenerate and trivial cases.
   return [] if coords.length < 3
   if coords.length is 3
     return [[0, 1, 2]]
 
-  # Define a function that checks if a vert is an ear.  Ears are convex verts that form
-  # triangles with their neighbors such that the triangle does not contain any other verts.
-  # This is a n-squared operation.
+  # Define some private variables in this closure.
   reflex = []
-  polygon = [0...(coords.length)]
-  checkEar = (ncurr) ->
-    pcurr = polygon.indexOf ncurr
+  polygon = [0...coords.length]
+  clipmap = [0...coords.length]
+
+  # Returns the indices of the two adjacent vertices.
+  # This honors the topology of the clipped polygon, although
+  # the input & output integers are indices into the original polygon.
+  getNeighbors = (ncurr) ->
+    pcurr = clipmap[ncurr]
     pprev = (pcurr + polygon.length - 1) % polygon.length
     pnext = (pcurr + 1) % polygon.length
     nprev = polygon[pprev]
     nnext = polygon[pnext]
+    [nprev, nnext]
+
+  # Checks if a vert is an ear.  Ears are convex verts that form
+  # triangles with their neighbors such that the triangle does not contain any other verts.
+  # This is a n-squared operation.
+  checkEar = (ncurr) ->
+    [nprev, nnext] = getNeighbors ncurr
     triangle = [nprev, ncurr, nnext]
     tricoords = (coords[i] for i in triangle)
     isEar = true
@@ -80,17 +89,13 @@ triangulate = (coords) ->
 
   # Returns true if the angle at the given index is > 180
   isReflexIndex = (ncurr) ->
-    pcurr = polygon.indexOf ncurr
-    pprev = (pcurr + polygon.length - 1) % polygon.length
-    pnext = (pcurr + 1) % polygon.length
-    nprev = polygon[pprev]
-    nnext = polygon[pnext]
+    [nprev, nnext] = getNeighbors ncurr
     a = coords[nprev]
     b = coords[ncurr]
     c = coords[nnext]
     return isReflexAngle a, b, c
 
-  # Next, find all reflex verts.
+  # Now for the algorithm.  First, find all reflex verts.
   convex = []
   for b, ncurr in coords
     if isReflexIndex ncurr
@@ -99,7 +104,7 @@ triangulate = (coords) ->
       reflex.push false
       convex.push ncurr
 
-  # Now find all the initial ears, which are verts that form triangles that
+  # Next find all the initial ears, which are verts that form triangles that
   # don't contain any other verts.  This is a n-squared operation.
   ears = []
   for ncurr in convex
@@ -117,38 +122,31 @@ triangulate = (coords) ->
   triangles = []
   while triangles.length < coords.length - 2
 
-    # Computational geometry theory says this is impossible.
-    if ears.length is 0
-      console.error 'internal error in ear clipping algorithm'
-      return triangles
-
     # Remove the index from the ear list.
     ncurr = ears.pop()
 
     # Insert the ear into the triangle list that we're building.
-    rcurr = polygon.indexOf ncurr
-    rprev = (rcurr + polygon.length - 1) % polygon.length
-    rnext = (rcurr + 1) % polygon.length
-    nprev = polygon[rprev]
-    nnext = polygon[rnext]
+    [nprev, nnext] = getNeighbors ncurr
     triangles.push [nprev, ncurr, nnext]
 
-    # Remove the index from the remaining polygon.
-    polygon.splice rcurr, 1
+    # Remove the ear vertex from the clipped polygon.
+    polygon.splice clipmap[ncurr], 1
+    for n in [ncurr...clipmap.length]
+      clipmap[n] = clipmap[n] - 1
 
     # Removing an ear changes the configuration as follows:
+    #  - If the neighbor is reflex, it might become convex and possibly an ear.
     #  - If the neighbor is convex, it remains convex and might become an ear.
     #  - If the neighbor is an ear, it might not stay an ear.
-    #  - If the neighbor is reflex, it might become convex and possibly an ear.
-    for adj in [nprev, nnext]
-      if reflex[adj] and (not isReflexIndex adj)
-        reflex[adj] = false
-      if not reflex[adj]
-        isEar = checkEar adj
-        earIndex = ears.indexOf adj
+    for neighbor in [nprev, nnext]
+      if reflex[neighbor] and (not isReflexIndex neighbor)
+        reflex[neighbor] = false
+      if not reflex[neighbor]
+        isEar = checkEar neighbor
+        earIndex = ears.indexOf neighbor
         wasEar = earIndex isnt -1
         if isEar and not wasEar
-          ears.push adj
+          ears.push neighbor
         else if not isEar and wasEar
           ears.splice earIndex, 1
 
