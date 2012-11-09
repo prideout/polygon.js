@@ -120,8 +120,9 @@ class Application
       e.originalEvent.preventDefault()
     c.mouseup (e) => @onUp e.offsetX, e.offsetY
     $(document).keyup (e) =>
-      @removePoint() if String.fromCharCode(e.keyCode) is 'D'
-      @circlify() if String.fromCharCode(e.keyCode) is 'C'
+      s = String.fromCharCode(e.keyCode)
+      @removePoint() if s is 'D'
+      @circlify() if s is 'C'
       @nextMode() if e.keyCode is 13
 
 module.exports = Application
