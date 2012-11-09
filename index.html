@@ -52,11 +52,12 @@
       attribute vec4 Position;
       uniform mat4 modelview;
       uniform mat4 projection;
+      uniform float pointSize;
       void main(void)
       {
           vec4 p = Position;
           gl_Position = projection * modelview * p;
-          gl_PointSize = 8.0;
+          gl_PointSize = pointSize;
       }
     </script>
     <script id="dotfs" type="x-shader/x-fragment">

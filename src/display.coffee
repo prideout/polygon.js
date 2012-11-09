@@ -29,6 +29,8 @@ class Display
     @coordsBuffer = gl.createBuffer()
     @indexArray = []
     @indexBuffer = gl.createBuffer()
+    @highlightPoint = -1
+    @highlightEdge = -1
     gl.clearColor 0.9, 0.9, 0.9, 1.0
     gl.lineWidth 2
     gl.enable gl.BLEND
@@ -53,11 +55,15 @@ class Display
       gl.uniformMatrix4fv program.modelview, false, mv.elements
       gl.uniformMatrix4fv program.projection, false, proj.elements
       gl.drawArrays gl.LINE_LOOP, 0, @coordsArray.length
+      if @highlightEdge > -1
+        gl.uniform4f program.color, 1, 1, 0, 0.5
+        gl.drawArrays gl.LINES, @highlightEdge, 2
 
     program = @programs.dot
     gl.useProgram program
     gl.uniformMatrix4fv program.modelview, false, mv.elements
     gl.uniformMatrix4fv program.projection, false, proj.elements
+    gl.uniform1f program.pointSize, 8
 
     gl.bindTexture gl.TEXTURE_2D, @pointSprite
     gl.uniform4f program.color, 0, 0, 0, 0.8
@@ -65,6 +71,14 @@ class Display
     if @coordsArray.length > 1
       gl.uniform4f program.color, 0.8, 0, 0, 0.8
       gl.drawArrays gl.POINTS, 1, @coordsArray.length - 1
+
+    if @highlightPoint > -1
+      gl.uniform1f program.pointSize, 12
+      gl.uniform4f program.color, 0, 0, 0, 0.5
+      gl.drawArrays gl.POINTS, @highlightPoint, 1
+      gl.uniform1f program.pointSize, 8
+      gl.uniform4f program.color, 1, 1, 0, 0.5
+      gl.drawArrays gl.POINTS, @highlightPoint, 1
 
     if @indexArray.length > 0
       program = @programs.contour

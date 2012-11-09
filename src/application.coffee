@@ -5,9 +5,9 @@ class Application
 
   constructor: ->
     @pts = []
-    @initDisplay()
-    @assignEventHandlers()
-    @requestAnimationFrame()
+    if @initDisplay()
+      @assignEventHandlers()
+      @requestAnimationFrame()
 
   initDisplay: ->
     try
@@ -17,10 +17,10 @@ class Application
     catch error
       msg = 'Alas, your browser does not support WebGL.'
       $('canvas').replaceWith "<p class='error'>#{msg}</p>"
-    if gl
-      width = parseInt $('canvas').css('width')
-      height = parseInt $('canvas').css('height')
-      @display = new Display(gl, width, height)
+    return false if not gl
+    width = parseInt $('canvas').css('width')
+    height = parseInt $('canvas').css('height')
+    @display = new Display(gl, width, height)
 
   requestAnimationFrame: ->
     onTick = => @tick()
@@ -28,7 +28,7 @@ class Application
 
   tick: ->
     @requestAnimationFrame()
-    @display?.render()
+    @display.render()
 
   onResize: ->
     #tbd
@@ -39,13 +39,21 @@ class Application
     @display.setTriangles indices
 
   onClick: (x, y) ->
-      @pts.push new vec2(x, y)
-      @injectPoints() if @display?
+    @pts.push new vec2(x, y)
+    @injectPoints() if @display?
+
+  onMove: (x, y) ->
+    p = new vec2(x, y)
+    @display.highlightPoint = -1
+    for pt, i in @pts
+      d = pt.distanceToSquared p
+      if d < 25
+        @display.highlightPoint = i
 
   removePoint: ->
-      return if @pts.length < 1
-      @pts.pop()
-      @injectPoints() if @display?
+    return if @pts.length < 1
+    @pts.pop()
+    @injectPoints()
 
   assignEventHandlers: ->
     $(window).resize => @onResize()
@@ -54,11 +62,10 @@ class Application
       @removePoint() if e.keyCode is 68
       @nextMode() if e.keyCode is 13
 
-    # (0,0) is upper-left corner.
     $('canvas').click (e) =>
-      p = $('canvas').position()
-      x = e.offsetX
-      y = e.offsetY
-      @onClick x, y
+      @onClick e.offsetX, e.offsetY
+
+    $('canvas').mousemove (e) =>
+      @onMove e.offsetX, e.offsetY
 
 module.exports = Application
