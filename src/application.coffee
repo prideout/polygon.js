@@ -50,14 +50,21 @@ class Application
     -1
 
   onDown: (x, y) ->
-    v = @getVertex x, y
-    return if v is -1
-    dragItem =
-      offset: new vec2()
-      index: v
     mouse = new vec2(x, y)
-    dragItem.offset.sub @pts[v], mouse
-    @dragList = [dragItem]
+    v = @getVertex x, y
+    if v isnt -1
+      dragItem = { offset: new vec2(), index: v }
+      dragItem.offset.sub @pts[v], mouse
+      @dragList = [dragItem]
+      return
+    e = @getEdge x, y
+    return if e is -1
+    a = { offset: new vec2(), index: e }
+    b = { offset: new vec2(), index: e+1 }
+    b.index = b.index % @pts.length
+    a.offset.sub @pts[a.index], mouse
+    b.offset.sub @pts[b.index], mouse
+    @dragList = [a, b]
 
   onUp: (x, y) ->
     mouse = new vec2(x, y)
