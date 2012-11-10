@@ -4,11 +4,11 @@
 # algorithms exist for polygon triangulation, this one is easy to follow.
 #
 # coords  ... coordinate list representing the original polygon.
-# polygon ... index list into original polygon; represents the clipped polygon.
-# clipmap ... maps from an "original" index to an index into the clipped polygon.
-# reflex  ... boolean list for reflex angles; one entry per original vertex
-# ncurr, nprev, nnext ... current/previous/next indices into 'coords'
-# pcurr, pprev, pnext ... current/previous/next indices into 'polygon'
+# polygon ... sequence of indices into 'coords'; represents the clipped polygon.
+# reflex .... boolean list for reflex angles; one entry per vertex in 'polygon'
+# ears ...... indices into 'polygon' for all of its ears
+# n, ncurr, nprev, nnext ... indices into 'coords'
+# p, pcurr, pprev, pnext ... indices into 'polygon'
 #
 tessellate = (coords, holes) ->
 
@@ -20,61 +20,56 @@ tessellate = (coords, holes) ->
   # Define some private variables in this closure.
   reflex = []
   polygon = [0...coords.length]
-  clipmap = [0...coords.length]
   reflexCount = 0
 
   # Returns the indices of the two adjacent vertices.
-  # This honors the topology of the clipped polygon, although
-  # the input & output integers are indices into the original polygon.
-  getNeighbors = (ncurr) ->
-    pcurr = clipmap[ncurr]
+  # This honors the topology of the clipped polygon.
+  getNeighbors = (pcurr) ->
     pprev = (pcurr + polygon.length - 1) % polygon.length
     pnext = (pcurr + 1) % polygon.length
-    nprev = polygon[pprev]
-    nnext = polygon[pnext]
-    [nprev, nnext]
+    [pprev, pnext]
 
   # Checks if a vert is an ear.  Ears are convex verts that form
   # triangles with their neighbors such that the triangle does not contain any other verts.
-  checkEar = (ncurr) ->
+  checkEar = (pcurr) ->
     return true if reflexCount is 0
-    [nprev, nnext] = getNeighbors ncurr
-    triangle = [nprev, ncurr, nnext]
-    tricoords = (coords[i] for i in triangle)
+    [pprev, pnext] = getNeighbors pcurr
+    ptriangle = [pprev, pcurr, pnext]
+    ntriangle = (polygon[p] for p in ptriangle)
+    tricoords = (coords[i] for i in ntriangle)
     isEar = true
-    for oindex in polygon
-      continue if oindex in triangle
-      continue if not reflex[oindex]
-      ocoord = coords[oindex]
-      if pointInTri ocoord, tricoords
+    for n, p in polygon
+      continue if n in ntriangle
+      continue if not reflex[p]
+      if pointInTri coords[n], tricoords
         isEar = false
         break
     isEar
 
   # Returns true if the angle at the given index is > 180
-  isReflexIndex = (ncurr) ->
-    [nprev, nnext] = getNeighbors ncurr
-    a = coords[nprev]
-    b = coords[ncurr]
-    c = coords[nnext]
+  isReflexIndex = (pcurr) ->
+    [pprev, pnext] = getNeighbors pcurr
+    a = coords[polygon[pprev]]
+    b = coords[polygon[pcurr]]
+    c = coords[polygon[pnext]]
     return isReflexAngle a, b, c
 
   # Now for the algorithm.  First, find all reflex verts.
   convex = []
-  for b, ncurr in coords
-    if isReflexIndex ncurr
+  for n, p in polygon
+    if isReflexIndex p
       reflex.push true
       reflexCount = reflexCount + 1
     else
       reflex.push false
-      convex.push ncurr
+      convex.push p
 
   # Next find all the initial ears, which are verts that form triangles that
   # don't contain any other verts.  This is a n-squared operation.
   ears = []
-  for ncurr in convex
-    if checkEar ncurr
-      ears.push ncurr
+  for p in convex
+    if checkEar p
+      ears.push p
 
   # Diagnostic output.
   if verbose
@@ -88,22 +83,27 @@ tessellate = (coords, holes) ->
   while triangles.length < coords.length - 2
 
     # Remove the index from the ear list.
-    ncurr = ears.pop()
+    pcurr = ears.pop()
 
     # Insert the ear into the triangle list that we're building.
-    [nprev, nnext] = getNeighbors ncurr
-    triangles.push [nprev, ncurr, nnext]
+    [pprev, pnext] = getNeighbors pcurr
+    ptriangle = [pprev, pcurr, pnext]
+    ntriangle = (polygon[p] for p in ptriangle)
+    triangles.push ntriangle
 
     # Remove the ear vertex from the clipped polygon.
-    polygon.splice clipmap[ncurr], 1
-    for n in [ncurr...clipmap.length]
-      clipmap[n] = clipmap[n] - 1
+    polygon.splice pcurr, 1
+    reflex.splice pcurr, 1
+    for p, i in ears
+      (ears[i] = ears[i] - 1) if p > pcurr
+    (pnext = pnext - 1) if pnext > pcurr
+    (pprev = pprev - 1) if pprev > pcurr
 
     # Removing an ear changes the configuration as follows:
     #  - If the neighbor is reflex, it might become convex and possibly an ear.
     #  - If the neighbor is convex, it remains convex and might become an ear.
     #  - If the neighbor is an ear, it might not stay an ear.
-    for neighbor in [nprev, nnext]
+    for neighbor in [pprev, pnext]
       if reflex[neighbor] and (not isReflexIndex neighbor)
         reflex[neighbor] = false
         reflexCount = reflexCount - 1
