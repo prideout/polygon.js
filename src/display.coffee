@@ -29,6 +29,7 @@ class Display
     @coordsBuffer = gl.createBuffer()
     @indexArray = []
     @indexBuffer = gl.createBuffer()
+    @lineBuffer = gl.createBuffer()
     @highlightPoint = -1
     @highlightEdge = -1
     gl.clearColor 0.9, 0.9, 0.9, 1.0
@@ -68,7 +69,8 @@ class Display
       if @highlightEdge > -1
         gl.lineWidth 4
         gl.uniform4f program.color, 0, 0, 0, 1
-        gl.drawArrays gl.LINES, @highlightEdge, 2
+        gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @lineBuffer
+        gl.drawElements gl.LINES, 2, gl.UNSIGNED_SHORT, 0
         gl.lineWidth 2
 
     program = @programs.dot
@@ -76,13 +78,24 @@ class Display
     gl.uniformMatrix4fv program.modelview, false, mv.elements
     gl.uniformMatrix4fv program.projection, false, proj.elements
     gl.uniform1f program.pointSize, 8
-
     gl.bindTexture gl.TEXTURE_2D, @pointSprite
+
+    if not @freezeContour
+      pointOffset = 0
+      pointCount = @numContourPoints
+    else
+      pointOffset = @numContourPoints
+      pointCount = @coordsArray.length - @numContourPoints
+
+    if pointCount is 0
+      gl.disableVertexAttribArray semantics.POSITION
+      return
+
     gl.uniform4f program.color, 0.7, 0.2, 0.2, 1
-    gl.drawArrays gl.POINTS, 0, 1
-    if @coordsArray.length > 1
+    gl.drawArrays gl.POINTS, pointOffset, 1
+    if pointCount > 1
       gl.uniform4f program.color, 0, 0, 0, 1
-      gl.drawArrays gl.POINTS, 1, @coordsArray.length - 1
+      gl.drawArrays gl.POINTS, pointOffset + 1, pointCount - 1
 
     if @highlightPoint > -1
       program = @programs.dot
@@ -93,17 +106,22 @@ class Display
 
     gl.disableVertexAttribArray semantics.POSITION
 
-  setPoints: (pts) ->
-    @coordsArray = pts.slice 0
+  setPoints: (contourPts, holePts) ->
+    @numContourPoints = contourPts.length
+    @coordsArray = contourPts.slice 0
     return if not @coordsArray.length
-    flattened = flatten @coordsArray
-    flattened.push pts[0].x
-    flattened.push pts[0].y
-    flattened.push pts[0].z
-    typedArray = new Float32Array flattened
+    typedArray = new Float32Array flatten @coordsArray
     gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
     gl.bufferData gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
     glCheck 'Error when trying to create points VBO'
+
+  setHighlightEdge: (edge) ->
+    @highlightEdge = edge
+    return if edge is -1
+    next = (edge+1) % @coordsArray.length
+    typedArray = new Uint16Array [edge, next]
+    gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @lineBuffer
+    gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
 
   setTriangles: (inds) ->
     @indexArray = inds.slice 0

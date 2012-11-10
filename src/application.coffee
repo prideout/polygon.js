@@ -1,9 +1,16 @@
 Display = require './display'
 triangulate = require './earclipping'
 
+Mode =
+  HOLE: 0
+  CONTOUR: 1
+
 class Application
   constructor: ->
-    @pts = []
+    @contourPts = []
+    @holePts = []
+    @mode = Mode.CONTOUR
+    @pts = @contourPts
     @dragList = []
     if @initDisplay()
       @assignEventHandlers()
@@ -77,28 +84,39 @@ class Application
       for item in @dragList
         @pts[item.index].add item.offset, mouse
       @dragList = []
-    @display.setPoints @pts
-    @display.setTriangles (triangulate @pts)
+    @display.setPoints @contourPts, @holePts
+    @display.setTriangles (triangulate @contourPts)
 
   onMove: (x, y) ->
     if not @dragList.length
       @display.highlightPoint = @getVertex x, y
       if @display.highlightPoint isnt -1
-        @display.highlightEdge = -1
+        @display.setHighlightEdge -1
       else
-        @display.highlightEdge = @getEdge x, y
+        @display.setHighlightEdge @getEdge x, y
       return
     mouse = new vec2(x, y)
     for item in @dragList
       @pts[item.index].add item.offset, mouse
-    @display.setPoints @pts
-    @display.setTriangles (triangulate @pts)
+    @display.setPoints @contourPts, @holePts
+    @display.setTriangles (triangulate @contourPts)
 
   removePoint: ->
     return if @pts.length < 1
     @pts.pop()
-    @display.setPoints @pts
-    @display.setTriangles (triangulate @pts)
+    @display.setPoints @contourPts, @holePts
+    @display.setTriangles (triangulate @contourPts)
+
+  nextMode: ->
+    @mode = Mode.HOLE
+    @pts = @holePts
+    @display.freezeContour = true
+    $('#instructions').html """
+    <p>
+      To form a hole, click around inside the outer
+      contour in <b>clockwise</b> order.
+    </p>
+    """
 
   circlify: ->
     @pts.push new vec2(0, 0)
@@ -108,11 +126,12 @@ class Application
       pt.x = 300 + 200 * Math.cos theta
       pt.y = 300 - 200 * Math.sin theta
       theta = theta + dtheta
-    @display.setPoints @pts
-    @display.setTriangles (triangulate @pts)
+    @display.setPoints @contourPts, @holePts
+    @display.setTriangles (triangulate @contourPts)
 
   assignEventHandlers: ->
     $(window).resize => @onResize()
+    $('#doneButton').click (e) => @nextMode()
     c = $('canvas')
     c.mousemove (e) => @onMove e.offsetX, e.offsetY
     c.mousedown (e) =>

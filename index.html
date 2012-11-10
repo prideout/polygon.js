@@ -22,18 +22,20 @@
       <h1>
         Ear clipping in Javascript
       </h1>
-      <p>
-        Click the WebGL canvas at various points in <b>counter-clockwise</b> order to create a simple polygon.
-        It can be concave if you want!
-      </p>
-      <p>
-        Press the <b>d</b> key to delete the most recently added point.  You can also use the mouse to drag
-        existing vertices and edges.
-      </p>
-      <p>
-        When you're done with the outer contour and ready to add a hole, click
-        <span id="doneButton">here</span> or press enter.
-      </p>
+      <div id="instructions">
+        <p>
+          Click the WebGL canvas at various points in <b>counter-clockwise</b> order to create a simple polygon.
+          It can be concave if you want!
+        </p>
+        <p>
+          Press the <b>d</b> key to delete the most recently added point.  You can also use the mouse to drag
+          existing vertices and edges.
+        </p>
+        <p>
+          When you're done with the outer contour and ready to add a hole, click
+          <span id="doneButton">here</span> or press enter.
+        </p>
+      </div>
       <div id="canvasParent">
         <canvas width="600" height="600">
         </canvas>
