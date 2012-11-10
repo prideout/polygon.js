@@ -21,6 +21,7 @@ triangulate = (coords) ->
   reflex = []
   polygon = [0...coords.length]
   clipmap = [0...coords.length]
+  reflexCount = 0
 
   # Returns the indices of the two adjacent vertices.
   # This honors the topology of the clipped polygon, although
@@ -36,6 +37,7 @@ triangulate = (coords) ->
   # Checks if a vert is an ear.  Ears are convex verts that form
   # triangles with their neighbors such that the triangle does not contain any other verts.
   checkEar = (ncurr) ->
+    return true if reflexCount is 0
     [nprev, nnext] = getNeighbors ncurr
     triangle = [nprev, ncurr, nnext]
     tricoords = (coords[i] for i in triangle)
@@ -62,6 +64,7 @@ triangulate = (coords) ->
   for b, ncurr in coords
     if isReflexIndex ncurr
       reflex.push true
+      reflexCount = reflexCount + 1
     else
       reflex.push false
       convex.push ncurr
@@ -103,6 +106,7 @@ triangulate = (coords) ->
     for neighbor in [nprev, nnext]
       if reflex[neighbor] and (not isReflexIndex neighbor)
         reflex[neighbor] = false
+        reflexCount = reflexCount - 1
       if not reflex[neighbor]
         isEar = checkEar neighbor
         earIndex = ears.indexOf neighbor
