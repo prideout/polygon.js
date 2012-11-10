@@ -10,7 +10,7 @@
 # ncurr, nprev, nnext ... current/previous/next indices into 'coords'
 # pcurr, pprev, pnext ... current/previous/next indices into 'polygon'
 #
-triangulate = (coords) ->
+tessellate = (coords, holes) ->
 
   # Return early for degenerate and trivial cases.
   return [] if coords.length < 3
@@ -155,4 +155,4 @@ isReflexAngle = (a, b, c) ->
   ab.sub b, a
   0 > ac.cross ab
 
-module.exports = triangulate
+module.exports.tessellate = tessellate

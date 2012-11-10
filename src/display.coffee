@@ -127,7 +127,12 @@ class Display
   setHighlightEdge: (edge) ->
     @highlightEdge = edge
     return if edge is -1
-    next = (edge+1) % @coordsArray.length
+    if edge < @numContourPoints
+      next = (edge+1) % @coordsArray.length
+    else
+      numHolePoints = @coordsArray.length - @numContourPoints
+      next = (edge - @numContourPoints + 1) % numHolePoints
+      next = next + @numContourPoints
     typedArray = new Uint16Array [edge, next]
     gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @lineBuffer
     gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW

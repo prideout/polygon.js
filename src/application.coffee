@@ -1,5 +1,5 @@
 Display = require './display'
-triangulate = require './earclipping'
+tessellate = (require './earclipping').tessellate
 
 Mode =
   HOLE: 0
@@ -37,8 +37,21 @@ class Application
     @requestAnimationFrame()
     @display.render()
 
-  onResize: ->
-    #tbd
+  updateDisplay: ->
+    @display.setPoints @contourPts, @holePts
+    triangles = tessellate @contourPts, @holePts
+    @display.setTriangles triangles
+
+  updateHighlight: (x, y) ->
+    p = @getVertex x, y
+    e = if p is -1 then (@getEdge x, y) else -1
+    if @mode is Mode.HOLE
+      if p isnt -1
+        p = p + @contourPts.length
+      if e isnt -1
+        e = e + @contourPts.length
+    @display.highlightPoint = p
+    @display.setHighlightEdge e
 
   getVertex: (x, y) ->
     p = new vec2(x, y)
@@ -84,28 +97,21 @@ class Application
       for item in @dragList
         @pts[item.index].add item.offset, mouse
       @dragList = []
-    @display.setPoints @contourPts, @holePts
-    @display.setTriangles (triangulate @contourPts)
+    @updateDisplay()
 
   onMove: (x, y) ->
     if not @dragList.length
-      @display.highlightPoint = @getVertex x, y
-      if @display.highlightPoint isnt -1
-        @display.setHighlightEdge -1
-      else
-        @display.setHighlightEdge @getEdge x, y
+      @updateHighlight x, y
       return
     mouse = new vec2(x, y)
     for item in @dragList
       @pts[item.index].add item.offset, mouse
-    @display.setPoints @contourPts, @holePts
-    @display.setTriangles (triangulate @contourPts)
+    @updateDisplay()
 
   removePoint: ->
     return if @pts.length < 1
     @pts.pop()
-    @display.setPoints @contourPts, @holePts
-    @display.setTriangles (triangulate @contourPts)
+    @updateDisplay()
 
   nextMode: ->
     @mode = Mode.HOLE
@@ -126,11 +132,9 @@ class Application
       pt.x = 300 + 200 * Math.cos theta
       pt.y = 300 - 200 * Math.sin theta
       theta = theta + dtheta
-    @display.setPoints @contourPts, @holePts
-    @display.setTriangles (triangulate @contourPts)
+    @updateDisplay()
 
   assignEventHandlers: ->
-    $(window).resize => @onResize()
     $('#doneButton').click (e) => @nextMode()
     c = $('canvas')
     c.mousemove (e) => @onMove e.offsetX, e.offsetY
