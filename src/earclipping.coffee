@@ -17,15 +17,35 @@ tessellate = (coords, holes) ->
   if coords.length is 3 and holes.length is 0
     return [[[0, 1, 2]], []]
 
-  # Diagnostic for handling holes
-  slice = []
-  if holes.length and holes[0].length
-    slice = [0, 0]
-
   # Define some private variables in this closure.
   reflex = []
   polygon = [0...coords.length]
   reflexCount = 0
+
+  # The first vertex in 'slice' is an index into the outer contour.
+  # The second vertex in 'slice' is an index into the hole.
+  # These two vertices are guaranteed to be visible to each other.
+  slice = []
+  if holes.length and holes[0].length
+    hole = holes[0]
+    nrightmost = 0
+    xrightmost = -10000
+    for coord, n in hole
+      if coord.x > xrightmost
+        xrightmost = coord.x
+        nrightmost = n
+    holeCoord = hole[nrightmost]
+    for c0, ncurr in coords
+      nnext = (ncurr + 1) % coords.length
+      c1 = coords[nnext]
+      continue if c0.x < holeCoord.x and c1.x < holeCoord.x
+      if c0.y <= holeCoord.y <= c1.y
+        #todo - perform intersection etc
+        nvisible = if c0.x > c1.x then ncurr else nnext
+      else if c1.y <= holeCoord.y <= c0.y
+        #todo - perform intersection etc
+        nvisible = if c0.x > c1.x then ncurr else nnext
+    slice = [nvisible, nrightmost]
 
   # Returns the indices of the two adjacent vertices.
   # This honors the topology of the clipped polygon.
