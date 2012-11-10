@@ -64,8 +64,17 @@ class Display
     if @coordsArray.length > 1
       program = @programs.contour
       gl.useProgram program
+
+      # Draw the outer contour
       gl.uniform4f program.color, 0, 0.4, 0.8, 1
-      gl.drawArrays gl.LINE_LOOP, 0, @coordsArray.length
+      gl.drawArrays gl.LINE_LOOP, 0, @numContourPoints
+
+      # Draw the hole outline (if it exists)
+      pointCount = @coordsArray.length - @numContourPoints
+      if pointCount
+        gl.uniform4f program.color, 0.8, 0.4, 0, 1
+        gl.drawArrays gl.LINE_LOOP, @numContourPoints, pointCount
+
       if @highlightEdge > -1
         gl.lineWidth 4
         gl.uniform4f program.color, 0, 0, 0, 1
@@ -108,7 +117,7 @@ class Display
 
   setPoints: (contourPts, holePts) ->
     @numContourPoints = contourPts.length
-    @coordsArray = contourPts.slice 0
+    @coordsArray = contourPts.concat holePts
     return if not @coordsArray.length
     typedArray = new Float32Array flatten @coordsArray
     gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
