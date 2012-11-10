@@ -114,12 +114,15 @@ class Display
       gl.uniform4f program.color, 0, 0, 0, 1
       gl.drawArrays gl.POINTS, pointOffset + 1, pointCount - 1
 
-    if @highlightPoint > -1
+    if @highlightPoint isnt -1
       program = @programs.dot
       gl.useProgram program
       gl.uniform1f program.pointSize, 14
       gl.uniform4f program.color, 0, 0, 0, 1
-      gl.drawArrays gl.POINTS, @highlightPoint, 1
+      if @highlightPoint > -1
+        gl.drawArrays gl.POINTS, @highlightPoint, 1
+      else
+        gl.drawArrays gl.POINTS, pointOffset, pointCount
 
     gl.disableVertexAttribArray semantics.POSITION
 

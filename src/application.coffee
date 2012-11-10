@@ -19,6 +19,7 @@ Instructions2 =  """
 
 class Application
   constructor: ->
+    @shiftKey = false
     @contourPts = []
     @holePts = []
     @mode = Mode.HOLE
@@ -57,6 +58,10 @@ class Application
     @display.setSliceEdge slice
 
   updateHighlight: (x, y) ->
+    if @shiftKey
+      @display.highlightPoint = -2
+      @display.setHighlightEdge -1
+      return
     p = @getVertex x, y
     e = if p is -1 then (@getEdge x, y) else -1
     if @mode is Mode.HOLE
@@ -85,6 +90,14 @@ class Application
 
   onDown: (x, y) ->
     mouse = new vec2(x, y)
+    if @shiftKey
+      @dragList = []
+      for e in [0...@pts.length]
+        item = { offset: new vec2(), index: e }
+        item.offset.sub @pts[item.index], mouse
+        @dragList.push item
+      $('canvas').css {cursor : 'none'}
+      return
     v = @getVertex x, y
     if v isnt -1
       dragItem = { offset: new vec2(), index: v }
@@ -149,7 +162,16 @@ class Application
       theta = theta + dtheta
     @updateDisplay()
 
+  setShiftKey: (isDown) ->
+    @shiftKey = isDown
+    if @shiftKey
+      @display.highlightPoint = -2
+      @display.setHighlightEdge -1
+    else if @display.highlightPoint is -2
+      @display.highlightPoint = -1
+
   assignEventHandlers: ->
+    $(document).bind 'keyup keydown', (e) => @setShiftKey e.shiftKey
     $('#doneButton').click (e) => @nextMode()
     c = $('canvas')
     c.mousemove (e) => @onMove e.offsetX, e.offsetY
