@@ -39,8 +39,10 @@ class Application
 
   updateDisplay: ->
     @display.setPoints @contourPts, @holePts
-    triangles = tessellate @contourPts, @holePts
+    holes = [@holePts]
+    [triangles, slice] = tessellate @contourPts, holes
     @display.setTriangles triangles
+    @display.setSliceEdge slice
 
   updateHighlight: (x, y) ->
     p = @getVertex x, y

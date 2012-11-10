@@ -13,9 +13,14 @@
 tessellate = (coords, holes) ->
 
   # Return early for degenerate and trivial cases.
-  return [] if coords.length < 3
-  if coords.length is 3
-    return [[0, 1, 2]]
+  return [[], []] if coords.length < 3
+  if coords.length is 3 and holes.length is 0
+    return [[[0, 1, 2]], []]
+
+  # Diagnostic for handling holes
+  slice = []
+  if holes.length and holes[0].length
+    slice = [0, 0]
 
   # Define some private variables in this closure.
   reflex = []
@@ -116,7 +121,7 @@ tessellate = (coords, holes) ->
         else if not isEar and wasEar
           ears.splice earIndex, 1
 
-  triangles
+  [triangles, slice]
 
 verbose = false
 ab = new vec2();  bc = new vec2()

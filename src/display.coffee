@@ -29,7 +29,9 @@ class Display
     @coordsBuffer = gl.createBuffer()
     @indexArray = []
     @indexBuffer = gl.createBuffer()
-    @lineBuffer = gl.createBuffer()
+    @hotEdgeBuffer = gl.createBuffer()
+    @sliceEdgeBuffer = gl.createBuffer()
+    @sliceEdgeBuffer.enabled = false
     @highlightPoint = -1
     @highlightEdge = -1
     gl.clearColor 0.9, 0.9, 0.9, 1.0
@@ -70,15 +72,21 @@ class Display
       gl.drawArrays gl.LINE_LOOP, 0, @numContourPoints
 
       # Draw the hole outline (if it exists)
-      pointCount = @coordsArray.length - @numContourPoints
-      if pointCount
+      numHolePoints = @coordsArray.length - @numContourPoints
+      if numHolePoints
         gl.uniform4f program.color, 0.8, 0.4, 0, 1
-        gl.drawArrays gl.LINE_LOOP, @numContourPoints, pointCount
+        gl.drawArrays gl.LINE_LOOP, @numContourPoints, numHolePoints
+
+        # Draw the slicing line for debugging purposes
+        if @sliceEdgeBuffer.enabled
+          gl.uniform4f program.color, 1, 0, 0, 1
+          gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @sliceEdgeBuffer
+          gl.drawElements gl.LINES, 2, gl.UNSIGNED_SHORT, 0
 
       if @highlightEdge > -1
         gl.lineWidth 4
         gl.uniform4f program.color, 0, 0, 0, 1
-        gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @lineBuffer
+        gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @hotEdgeBuffer
         gl.drawElements gl.LINES, 2, gl.UNSIGNED_SHORT, 0
         gl.lineWidth 2
 
@@ -124,6 +132,17 @@ class Display
     gl.bufferData gl.ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
     glCheck 'Error when trying to create points VBO'
 
+  setSliceEdge: (endpoints) ->
+    if not endpoints.length
+      @sliceEdgeBuffer.enabled = false
+      return
+    @sliceEdgeBuffer.enabled = true
+    v0 = endpoints[0]
+    v1 = endpoints[1] + @numContourPoints
+    typedArray = new Uint16Array [v0, v1]
+    gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @sliceEdgeBuffer
+    gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
+
   setHighlightEdge: (edge) ->
     @highlightEdge = edge
     return if edge is -1
@@ -134,7 +153,7 @@ class Display
       next = (edge - @numContourPoints + 1) % numHolePoints
       next = next + @numContourPoints
     typedArray = new Uint16Array [edge, next]
-    gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @lineBuffer
+    gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @hotEdgeBuffer
     gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
 
   setTriangles: (inds) ->
