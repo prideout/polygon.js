@@ -5,12 +5,24 @@ Mode =
   HOLE: 0
   CONTOUR: 1
 
+Instructions1 =  """
+<p>
+  To form a hole, click around inside the outer
+  contour in <b>clockwise</b> order.
+</p>"""
+
+Instructions2 =  """
+<p>
+  Click the WebGL canvas at various points in <b>counter-clockwise</b> order to create a simple polygon.
+  It can be concave if you want!
+</p>"""
+
 class Application
   constructor: ->
     @contourPts = []
     @holePts = []
-    @mode = Mode.CONTOUR
-    @pts = @contourPts
+    @mode = Mode.HOLE
+    @nextMode()
     @dragList = []
     if @initDisplay()
       @assignEventHandlers()
@@ -116,15 +128,16 @@ class Application
     @updateDisplay()
 
   nextMode: ->
-    @mode = Mode.HOLE
-    @pts = @holePts
-    @display.freezeContour = true
-    $('#instructions').html """
-    <p>
-      To form a hole, click around inside the outer
-      contour in <b>clockwise</b> order.
-    </p>
-    """
+    if @mode is Mode.CONTOUR
+        @mode = Mode.HOLE
+        @pts = @holePts
+        @display?.freezeContour = true
+        $('#instructions').html Instructions1
+    else
+        @mode = Mode.CONTOUR
+        @pts = @contourPts
+        @display?.freezeContour = false
+        $('#instructions').html Instructions2
 
   circlify: ->
     @pts.push new vec2(0, 0)
