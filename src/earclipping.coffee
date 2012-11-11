@@ -22,11 +22,9 @@ tessellate = (coords, holes) ->
   polygon = [0...coords.length]
   reflexCount = 0
 
-  # The first vertex in 'slice' is an index into the outer contour.
-  # The second vertex in 'slice' is an index into the hole.
-  # These two vertices are guaranteed to be visible to each other.
-  slice = []
-  if holes.length and holes[0].length
+  # Finds two mutually visible vertices between the
+  # outer contour and the given hole.
+  getSlice = (hole) ->
     hole = holes[0]
     Mn = 0
     xrightmost = -10000
@@ -55,6 +53,23 @@ tessellate = (coords, holes) ->
           else
             P = c1
             Pn = nnext
+
+    tricoords = [M, I, P]
+    Rslope = 1000
+    Rn = -1
+    for n, p in polygon
+      continue if not reflex[p]
+      R = coords[n]
+      if pointInTri R, tricoords
+        dy = Math.abs(R.y - P.y)
+        dx = Math.abs(R.x - P.x)
+        continue if dx is 0
+        slope = dy / dx
+        if slope < Rslope
+          Rslope = slope
+          Rn = n
+
+    Pn = Rn if Rn isnt -1
     slice = [Pn, Mn]
 
   # Returns the indices of the two adjacent vertices.
@@ -98,6 +113,14 @@ tessellate = (coords, holes) ->
     else
       reflex.push false
       convex.push p
+
+  # Now, slice up the polygon if it has holes.
+  # The first vertex in 'slice' is an index into the outer contour.
+  # The second vertex in 'slice' is an index into the hole.
+  # These two vertices are guaranteed to be visible to each other.
+  slice = []
+  if holes.length and holes[0].length
+    slice = getSlice holes[0]
 
   # Next find all the initial ears, which are verts that form triangles that
   # don't contain any other verts.  This is a n-squared operation.
