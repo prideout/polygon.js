@@ -173,8 +173,7 @@ class Application
       theta = theta + dtheta
     @updateDisplay()
 
-  setShiftKey: (isDown) ->
-    @shiftKey = isDown
+  setShiftKey: ->
     if @shiftKey
       @display.highlightPoint = -2
       @display.setHighlightEdge -1
@@ -186,7 +185,18 @@ class Application
     console.info "holePts = ", JSON.stringify @holePts
 
   assignEventHandlers: ->
-    $(document).bind 'keyup keydown', (e) => @setShiftKey e.shiftKey
+
+    # Honoring e.shiftKey seems to be unreliable on some platforms.
+    # http://cross-browser.com/x/examples/shift_mode.php
+    $(document).bind 'keydown', (e) =>
+      if e.keyCode is 16
+        @shiftKey = true
+        @setShiftKey @shiftKey
+    $(document).bind 'keyup', (e) =>
+      if e.keyCode is 16
+        @shiftKey = false
+        @setShiftKey @shiftKey
+
     $('#doneButton').click (e) => @nextMode()
     c = $('canvas')
     c.mousemove (e) => @onMove e.offsetX, e.offsetY
