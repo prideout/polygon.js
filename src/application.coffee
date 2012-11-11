@@ -17,17 +17,28 @@ Instructions2 =  """
   It can be concave if you want!
 </p>"""
 
+startFigure = true
+
 class Application
   constructor: ->
     @shiftKey = false
-    @contourPts = []
-    @holePts = []
+    if startFigure
+      c = [{"x":440,"y":502},{"x":414,"y":438},{"x":404,"y":355},{"x":394,"y":298},{"x":442,"y":278},{"x":470,"y":265},{"x":480,"y":252},{"x":489,"y":232},{"x":508,"y":198},{"x":467,"y":173},{"x":437,"y":236},{"x":395,"y":251},{"x":361,"y":257},{"x":324,"y":212},{"x":317,"y":170},{"x":327,"y":150},{"x":349,"y":125},{"x":367,"y":82},{"x":353,"y":56},{"x":308,"y":22},{"x":244,"y":40},{"x":233,"y":75},{"x":258,"y":146},{"x":278,"y":159},{"x":299,"y":216},{"x":282,"y":277},{"x":228,"y":246},{"x":168,"y":180},{"x":159,"y":167},{"x":117,"y":207},{"x":194,"y":249},{"x":223,"y":277},{"x":263,"y":304},{"x":277,"y":385},{"x":259,"y":406},{"x":225,"y":429},{"x":217,"y":435},{"x":159,"y":496},{"x":293,"y":520},{"x":284,"y":451},{"x":315,"y":406},{"x":323,"y":381},{"x":351,"y":391},{"x":354,"y":421},{"x":370,"y":458},{"x":344,"y":487},{"x":335,"y":535}]
+      h = [{"x":241,"y":489},{"x":225,"y":475},{"x":231,"y":450},{"x":256,"y":446},{"x":269,"y":467},{"x":257,"y":487}]
+      @contourPts = (new vec2(o.x, o.y) for o in c)
+      @holePts = (new vec2(o.x, o.y) for o in h)
+    else
+      @contourPts = []
+      @holePts = []
+
     @mode = Mode.HOLE
     @nextMode()
     @dragList = []
     if @initDisplay()
       @assignEventHandlers()
       @requestAnimationFrame()
+    if startFigure
+      @updateDisplay()
 
   initDisplay: ->
     try
@@ -170,6 +181,10 @@ class Application
     else if @display.highlightPoint is -2
       @display.highlightPoint = -1
 
+  dumpPoints: ->
+    console.info "contourPts = ", JSON.stringify @contourPts
+    console.info "holePts = ", JSON.stringify @holePts
+
   assignEventHandlers: ->
     $(document).bind 'keyup keydown', (e) => @setShiftKey e.shiftKey
     $('#doneButton').click (e) => @nextMode()
@@ -183,6 +198,7 @@ class Application
       s = String.fromCharCode(e.keyCode)
       @removePoint() if s is 'D'
       @circlify() if s is 'C'
+      @dumpPoints() if s is 'P'
       @nextMode() if e.keyCode is 13
 
 module.exports = Application
