@@ -28,24 +28,34 @@ tessellate = (coords, holes) ->
   slice = []
   if holes.length and holes[0].length
     hole = holes[0]
-    nrightmost = 0
+    Mn = 0
     xrightmost = -10000
     for coord, n in hole
       if coord.x > xrightmost
         xrightmost = coord.x
-        nrightmost = n
-    holeCoord = hole[nrightmost]
+        Mn = n
+
+    M = hole[Mn]
+    I = new vec2 10000, M.y
+    P = new vec2()
+    Pn = -1
+
     for c0, ncurr in coords
       nnext = (ncurr + 1) % coords.length
       c1 = coords[nnext]
-      continue if c0.x < holeCoord.x and c1.x < holeCoord.x
-      if c0.y <= holeCoord.y <= c1.y
-        #todo - perform intersection etc
-        nvisible = if c0.x > c1.x then ncurr else nnext
-      else if c1.y <= holeCoord.y <= c0.y
-        #todo - perform intersection etc
-        nvisible = if c0.x > c1.x then ncurr else nnext
-    slice = [nvisible, nrightmost]
+      continue if c0.x < M.x and c1.x < M.x
+      continue if c0.x > I.x and c1.x > I.x
+      if (c0.y <= M.y <= c1.y) or (c1.y <= M.y <= c0.y)
+        x = intersectSegmentX c0, c1, M.y
+        if x < I.x
+          I.x = x
+          if c0.x > c1.x
+            P = c0
+            Pn = ncurr
+          else
+            P = c1
+            Pn = nnext
+    slice = [Pn, Mn]
 
   # Returns the indices of the two adjacent vertices.
   # This honors the topology of the clipped polygon.
@@ -179,5 +189,19 @@ isReflexAngle = (a, b, c) ->
   ac.sub c, a
   ab.sub b, a
   0 > ac.cross ab
+
+# INTERSECT SEGMENT X
+#
+# Find the X coordinate within the given line segment
+# that has the given Y value.
+#
+intersectSegmentX = (p0, p1, y) ->
+  return p0.x if p0.y == p1.y
+  if p0.y < p1.y
+    t = (y - p0.y) / (p1.y - p0.y)
+    p0.x + t * (p1.x - p0.x)
+  else
+    t = (y - p1.y) / (p0.y - p1.y)
+    p1.x + t * (p0.x - p1.x)
 
 module.exports.tessellate = tessellate
