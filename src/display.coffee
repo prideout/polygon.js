@@ -22,9 +22,12 @@ shaders.contour =
 
 class Display
   constructor: (context, @width, @height) ->
+    @ready = false
     gl = context
     @programs = compilePrograms shaders
-    @pointSprite = loadTexture 'textures/PointSprite.png'
+    loadTexture 'textures/PointSprite.png', (i) =>
+      @pointSprite = i
+      @ready = true
     @coordsArray = []
     @coordsBuffer = gl.createBuffer()
     @indexArray = []
@@ -40,6 +43,7 @@ class Display
     gl.blendFunc gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA
 
   render: ->
+    return if not @ready
     gl.clear gl.COLOR_BUFFER_BIT
     return if @coordsArray.length is 0
 
@@ -199,7 +203,7 @@ compileShader = (names, type) ->
   console.error gl.getShaderInfoLog(handle) unless status
   handle
 
-loadTexture = (filename) ->
+loadTexture = (filename, onLoaded) ->
   tex = gl.createTexture()
   tex.image = new Image()
   tex.image.onload = ->
@@ -210,7 +214,7 @@ loadTexture = (filename) ->
     gl.texParameteri gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR
     gl.bindTexture gl.TEXTURE_2D, null
     glCheck 'Error when loading texture'
+    onLoaded tex
   tex.image.src = filename
-  tex
 
 module.exports = Display

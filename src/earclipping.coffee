@@ -25,7 +25,6 @@ tessellate = (coords, holes) ->
   # Finds two mutually visible vertices between the
   # outer contour and the given hole.
   getSlice = (hole) ->
-    hole = holes[0]
     Mn = 0
     xrightmost = -10000
     for coord, n in hole
@@ -101,15 +100,12 @@ tessellate = (coords, holes) ->
     return isReflexAngle a, b, c
 
   # Repair the polygon if it has holes by duplicating verts along
-  # a new edge called "slice".  The verts in "slice" must be
+  # a new edge called "slice".  The slice verts must be
   # visible to each other.  (ie, no edge intersections)
   slice = []
   if holes.length and holes[0].length
     for n, p in polygon
-      if isReflexIndex p
-        reflex.push true
-      else
-        reflex.push false
+      reflex.push isReflexIndex p
     hole = holes[0]
 
     # Find any two mutually visible vertices, the first
@@ -131,14 +127,14 @@ tessellate = (coords, holes) ->
 
     # Similarly shift the indices of 'hole' and append
     # them to the new polygon.
-    i = (slice[1] + 1) % hole.length
+    i = slice[1]
     for _ in [0...hole.length]
       newPolygon.push holeStart + i
       i = (i + 1) % hole.length
 
     # Insert the two duplicated verts that occur along
     # the new "slice" edge.
-    newPolygon.push slice[1] + holeStart
+    newPolygon.push newPolygon[polygon.length]
     newPolygon.push newPolygon[polygon.length - 1]
     polygon = newPolygon
 
@@ -171,10 +167,11 @@ tessellate = (coords, holes) ->
 
   # Remove ears, one by one.
   triangles = []
-  while triangles.length < coords.length - 2
+  while polygon.length > 0
 
     # Remove the index from the ear list.
     pcurr = ears.pop()
+    watchdog = watchdog - 1
 
     # Insert the ear into the triangle list that we're building.
     [pprev, pnext] = getNeighbors pcurr
