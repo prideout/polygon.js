@@ -32,12 +32,10 @@ tessellate = (coords, holes) ->
       if coord.x > xrightmost
         xrightmost = coord.x
         Mn = n
-
     M = hole[Mn]
     I = new vec2 10000, M.y
     P = new vec2()
     Pn = -1
-
     for c0, ncurr in coords
       nnext = (ncurr + 1) % coords.length
       c1 = coords[nnext]
@@ -53,7 +51,6 @@ tessellate = (coords, holes) ->
           else
             P = c1
             Pn = nnext
-
     tricoords = [M, I, P]
     Rslope = 1000
     Rn = -1
@@ -68,7 +65,6 @@ tessellate = (coords, holes) ->
         if slope < Rslope
           Rslope = slope
           Rn = n
-
     Pn = Rn if Rn isnt -1
     slice = [Pn, Mn]
 
@@ -104,8 +100,53 @@ tessellate = (coords, holes) ->
     c = coords[polygon[pnext]]
     return isReflexAngle a, b, c
 
-  # Now for the algorithm.  First, find all reflex verts.
+  # Repair the polygon if it has holes by duplicating verts along
+  # a new edge called "slice".  The verts in "slice" must be
+  # visible to each other.  (ie, no edge intersections)
+  slice = []
+  if holes.length and holes[0].length
+    for n, p in polygon
+      if isReflexIndex p
+        reflex.push true
+      else
+        reflex.push false
+    hole = holes[0]
+
+    # Find any two mutually visible vertices, the first
+    # from the outer contour, the second from the hole.
+    slice = getSlice hole
+
+    # Clone the outer contour and append the hole verts.
+    coords = coords.slice 0
+    holeStart = coords.length
+    (coords.push h) for h in hole
+
+    # Perform a rotational shift of the indices in 'polygon'
+    # such that the slice vertex winds up at the end of the list.
+    newPolygon = []
+    i = (slice[0] + 1) % polygon.length
+    for _ in [0...polygon.length]
+      newPolygon.push polygon[i]
+      i = (i + 1) % polygon.length
+
+    # Similarly shift the indices of 'hole' and append
+    # them to the new polygon.
+    i = (slice[1] + 1) % hole.length
+    for _ in [0...hole.length]
+      newPolygon.push holeStart + i
+      i = (i + 1) % hole.length
+
+    # Insert the two duplicated verts that occur along
+    # the new "slice" edge.
+    newPolygon.push slice[1] + holeStart
+    newPolygon.push newPolygon[polygon.length - 1]
+    polygon = newPolygon
+
+  # We're now ready for the ear clipping algorithm.  First,
+  # find all reflex verts.
   convex = []
+  reflex = []
+  reflexCount = 0
   for n, p in polygon
     if isReflexIndex p
       reflex.push true
@@ -113,14 +154,6 @@ tessellate = (coords, holes) ->
     else
       reflex.push false
       convex.push p
-
-  # Now, slice up the polygon if it has holes.
-  # The first vertex in 'slice' is an index into the outer contour.
-  # The second vertex in 'slice' is an index into the hole.
-  # These two vertices are guaranteed to be visible to each other.
-  slice = []
-  if holes.length and holes[0].length
-    slice = getSlice holes[0]
 
   # Next find all the initial ears, which are verts that form triangles that
   # don't contain any other verts.  This is a n-squared operation.
