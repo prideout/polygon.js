@@ -33,6 +33,7 @@ class Display
     @coordsArray = []
     @coordsBuffer = gl.createBuffer()
     @indexArray = []
+    @outlineBuffer = gl.createBuffer()
     @indexBuffer = gl.createBuffer()
     @hotEdgeBuffer = gl.createBuffer()
     @sliceEdgeBuffer = gl.createBuffer()
@@ -69,6 +70,9 @@ class Display
       gl.uniform4f program.color, 0.25, 0.25, 0, 0.5
       gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @indexBuffer
       gl.drawElements gl.TRIANGLES, 3 * @indexArray.length, gl.UNSIGNED_SHORT, 0
+      if @visualize
+        gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @outlineBuffer
+        gl.drawElements gl.LINES, 6 * @indexArray.length, gl.UNSIGNED_SHORT, 0
 
     if @coordsArray.length > 1
       program = @programs.contour
@@ -172,6 +176,20 @@ class Display
     gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @indexBuffer
     gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
     glCheck 'Error when trying to create index VBO'
+
+    outlines = []
+    console.info inds
+    for tri in @indexArray
+      outlines.push tri[0]
+      outlines.push tri[1]
+      outlines.push tri[1]
+      outlines.push tri[2]
+      outlines.push tri[2]
+      outlines.push tri[0]
+    typedArray = new Uint16Array outlines
+    gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @outlineBuffer
+    gl.bufferData gl.ELEMENT_ARRAY_BUFFER, typedArray, gl.STATIC_DRAW
+    glCheck 'Error when trying to create outlines VBO'
 
 glCheck = (msg) ->
   console.error(msg) if gl.getError() isnt gl.NO_ERROR

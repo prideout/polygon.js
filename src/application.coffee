@@ -20,8 +20,9 @@ TopInstructions2 =  """
 
 TopInstructions3 =  """
 <p>
-  The ear clipping algorithm can tessellate concave polygons
-  with holes. To draw your own polygon, click <span class="doneButton">here</span>.
+  The ear clipping algorithm can tessellate concave polygons with holes.
+  To draw your own polygon, click <span class="doneButton">here</span>
+  or press enter.
 </p>"""
 
 BottomInstructions =  """
@@ -186,7 +187,9 @@ class Application
     else if @mode is Mode.HOLE
         @mode = Mode.VISUALIZE
         @pts = null
-        @display?.visualize = true
+        @display.visualize = true
+        @display.setHighlightEdge -1
+        @display.highlightPoint = -1
         $('#top-instructions').html TopInstructions3
         $('#bottom-instructions').html ''
     else if @mode is Mode.VISUALIZE
