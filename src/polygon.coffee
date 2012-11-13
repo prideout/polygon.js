@@ -26,7 +26,9 @@
 POLYGON = {}
 POLYGON.tessellate = (coords, holes) ->
 
-  verbose = false
+  vec2 = POLYGON.vec2
+
+  # SCRATCH VECTORS
   ab = new vec2();  bc = new vec2()
   ca = new vec2();  ap = new vec2()
   bp = new vec2();  cp = new vec2()
@@ -225,6 +227,7 @@ POLYGON.tessellate = (coords, holes) ->
       ears.push p
 
   # Diagnostic output.
+  verbose = false
   if verbose
     console.info ""
     console.info "ears    #{ears}"
@@ -271,3 +274,90 @@ POLYGON.tessellate = (coords, holes) ->
           ears.splice earIndex, 1
 
   triangles
+
+# SIMPLE 2D VECTOR CLASS
+`
+POLYGON.vec2 = function ( x, y ) {
+	this.x = x || 0;
+	this.y = y || 0;
+};
+POLYGON.vec2.prototype = {
+	constructor: POLYGON.vec2,
+	set: function ( x, y ) {
+		this.x = x;
+		this.y = y;
+		return this;
+	},
+	copy: function ( v ) {
+		this.x = v.x;
+		this.y = v.y;
+		return this;
+	},
+	add: function ( a, b ) {
+		this.x = a.x + b.x;
+		this.y = a.y + b.y;
+		return this;
+	},
+	sub: function ( a, b ) {
+		this.x = a.x - b.x;
+		this.y = a.y - b.y;
+		return this;
+	},
+	multiplyScalar: function ( s ) {
+		this.x *= s;
+		this.y *= s;
+		return this;
+	},
+	divideScalar: function ( s ) {
+		if ( s ) {
+			this.x /= s;
+			this.y /= s;
+		} else {
+			this.set( 0, 0 );
+		}
+		return this;
+	},
+	negate: function() {
+		return this.multiplyScalar( - 1 );
+	},
+	dot: function ( v ) {
+		return this.x * v.x + this.y * v.y;
+	},
+	cross: function ( v ) {
+		return this.x * v.y - this.y * v.x;
+	},
+	lengthSq: function () {
+		return this.x * this.x + this.y * this.y;
+	},
+	length: function () {
+		return Math.sqrt( this.lengthSq() );
+	},
+	normalize: function () {
+		return this.divideScalar( this.length() );
+	},
+	distanceTo: function ( v ) {
+		return Math.sqrt( this.distanceToSquared( v ) );
+	},
+	distanceToSquared: function ( v ) {
+		var dx = this.x - v.x, dy = this.y - v.y;
+		return dx * dx + dy * dy;
+	},
+	setLength: function ( l ) {
+		return this.normalize().multiplyScalar( l );
+	},
+	lerpSelf: function ( v, alpha ) {
+		this.x += ( v.x - this.x ) * alpha;
+		this.y += ( v.y - this.y ) * alpha;
+		return this;
+	},
+	equals: function( v ) {
+		return ( ( v.x === this.x ) && ( v.y === this.y ) );
+	},
+	isZero: function ( v ) {
+		return this.lengthSq() < ( v !== undefined ? v : 0.0001 );
+	},
+	clone: function () {
+		return new POLYGON.vec2( this.x, this.y );
+	}
+};
+`
