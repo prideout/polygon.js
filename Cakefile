@@ -1,9 +1,12 @@
 fs = require 'fs'
 {exec, spawn} = require 'child_process'
 
-task 'build', 'Build dependencies of main.coffee', ->
+task 'build', 'Build dependencies of demo.coffee', ->
   exec(
-    "browserify src/main.coffee -v -o js/main.js"
+    "coffee -c -b -o js src/polygon.coffee"
+    lastHandler)
+  exec(
+    "browserify src/demo.coffee -v -o js/demo.js"
     lastHandler)
 
 task 'checkTest', 'Check the results of the test against baseline', ->

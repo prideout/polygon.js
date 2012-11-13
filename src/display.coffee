@@ -178,7 +178,6 @@ class Display
     glCheck 'Error when trying to create index VBO'
 
     outlines = []
-    console.info inds
     for tri in @indexArray
       outlines.push tri[0]
       outlines.push tri[1]

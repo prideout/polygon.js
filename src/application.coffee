@@ -1,5 +1,4 @@
 Display = require './display'
-tessellate = (require './earclipping').tessellate
 
 Mode =
   HOLE: 0
@@ -85,7 +84,7 @@ class Application
   updateDisplay: ->
     @display.setPoints @contourPts, @holePts
     holes = [@holePts]
-    [triangles, slice] = tessellate @contourPts, holes
+    [triangles, slice] = POLYGON.tessellate @contourPts, holes
     @display.setTriangles triangles
     @display.setSliceEdge slice
 
