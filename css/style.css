@@ -39,7 +39,7 @@ h1 {
     color: #a11;
 }
 
-#doneButton {
+.doneButton {
     color:#00f;
     cursor:pointer;
 }

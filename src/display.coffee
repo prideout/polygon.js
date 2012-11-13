@@ -20,6 +20,8 @@ shaders.contour =
   attribs:
     Position: semantics.POSITION
 
+showSliceLine = false
+
 class Display
   constructor: (context, @width, @height) ->
     @ready = false
@@ -37,6 +39,7 @@ class Display
     @sliceEdgeBuffer.enabled = false
     @highlightPoint = -1
     @highlightEdge = -1
+    @visualize = false
     gl.clearColor 0.9, 0.9, 0.9, 1.0
     gl.lineWidth 2
     gl.enable gl.BLEND
@@ -82,7 +85,7 @@ class Display
         gl.drawArrays gl.LINE_LOOP, @numContourPoints, numHolePoints
 
         # Draw the slicing line for debugging purposes
-        if @sliceEdgeBuffer.enabled
+        if showSliceLine and @sliceEdgeBuffer.enabled
           gl.uniform4f program.color, 1, 0, 0, 1
           gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @sliceEdgeBuffer
           gl.drawElements gl.LINES, 2, gl.UNSIGNED_SHORT, 0
@@ -108,7 +111,7 @@ class Display
       pointOffset = @numContourPoints
       pointCount = @coordsArray.length - @numContourPoints
 
-    if pointCount is 0
+    if pointCount is 0 or @visualize
       gl.disableVertexAttribArray semantics.POSITION
       return
 

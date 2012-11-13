@@ -104,7 +104,7 @@ tessellate = (coords, holes) ->
   # a new edge called "slice".  The slice verts must be
   # visible to each other.  (ie, no edge intersections)
   slice = []
-  if holes.length and holes[0].length
+  if holes.length and holes[0].length >= 3
     for n, p in polygon
       reflex.push isReflexIndex p
     hole = holes[0]

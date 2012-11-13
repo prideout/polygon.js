@@ -4,17 +4,33 @@ tessellate = (require './earclipping').tessellate
 Mode =
   HOLE: 0
   CONTOUR: 1
+  VISUALIZE: 2
 
-Instructions1 =  """
+TopInstructions1 =  """
 <p>
   To form a hole, click around inside the outer
   contour in <b>clockwise</b> order.
 </p>"""
 
-Instructions2 =  """
+TopInstructions2 =  """
 <p>
   Click the WebGL canvas at various points in <b>counter-clockwise</b> order to create a simple polygon.
   It can be concave if you want!
+</p>"""
+
+TopInstructions3 =  """
+<p>
+  The ear clipping algorithm can tessellate concave polygons
+  with holes. To draw your own polygon, click <span class="doneButton">here</span>.
+</p>"""
+
+BottomInstructions =  """
+<p>
+  Press the <b>d</b> key to delete the most recently added point.  You can also use the mouse to drag
+  existing vertices and edges.  Hold the shift key to drag the entire polyline.
+</p>
+<p>
+  When you're done, click <span class="doneButton">here</span> or press enter.
 </p>"""
 
 startFigure = true
@@ -35,11 +51,10 @@ class Application
     else
       @contourPts = []
       @holePts = []
-
     @mode = Mode.HOLE
-    @nextMode()
     @dragList = []
     if @initDisplay()
+      @nextMode()
       @assignEventHandlers()
       @requestAnimationFrame()
     if startFigure
@@ -89,6 +104,7 @@ class Application
     @display.setHighlightEdge e
 
   getVertex: (x, y) ->
+    return -1 if not @pts
     p = new vec2(x, y)
     for pt, i in @pts
       d = pt.distanceToSquared p
@@ -96,6 +112,7 @@ class Application
     -1
 
   getEdge: (x, y) ->
+    return -1 if not @pts
     p = new vec2(x, y)
     for pt, i in @pts
       v = @pts[i]
@@ -132,6 +149,7 @@ class Application
     $('canvas').css {cursor: 'none'}
 
   onUp: (x, y) ->
+    return if not @pts
     mouse = new vec2(x, y)
     if not @dragList.length
       @pts.push mouse
@@ -143,6 +161,7 @@ class Application
     @updateDisplay()
 
   onMove: (x, y) ->
+    return if not @pts
     if not @dragList.length
       @updateHighlight x, y
       return
@@ -160,13 +179,28 @@ class Application
     if @mode is Mode.CONTOUR
         @mode = Mode.HOLE
         @pts = @holePts
-        @display?.freezeContour = true
-        $('#instructions').html Instructions1
-    else
+        @display.freezeContour = true
+        @display.visualize = false
+        $('#top-instructions').html TopInstructions1
+        $('#bottom-instructions').html BottomInstructions
+    else if @mode is Mode.HOLE
+        @mode = Mode.VISUALIZE
+        @pts = null
+        @display?.visualize = true
+        $('#top-instructions').html TopInstructions3
+        $('#bottom-instructions').html ''
+    else if @mode is Mode.VISUALIZE
+        if startFigure
+          @contourPts = []
+          @holePts = []
+          startFigure = false
         @mode = Mode.CONTOUR
         @pts = @contourPts
-        @display?.freezeContour = false
-        $('#instructions').html Instructions2
+        @display.freezeContour = false
+        @display.visualize = false
+        $('#top-instructions').html TopInstructions2
+        $('#bottom-instructions').html BottomInstructions
+    @updateDisplay()
 
   circlify: ->
     @pts.push new vec2(0, 0)
@@ -204,7 +238,7 @@ class Application
         @shiftKey = false
         @setShiftKey @shiftKey
 
-    $('#doneButton').click (e) => @nextMode()
+    $(document).on 'click', '.doneButton', => @nextMode()
     c = $('canvas')
     c.mousemove (e) => @onMove e.offsetX, e.offsetY
     c.mousedown (e) =>
