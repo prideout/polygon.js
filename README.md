@@ -4,8 +4,8 @@ You can use this code in your Javascript project simply by including [polygon.js
 
 Usage example:
       
-    contour = [{x:520,y:440},{x:315,y:100},{x:90,y:440}]
-    hole = [{x:300,y:290},{x:330,y:290},{x:315,y:380}]
+    contour = [{x:520,y:440},{x:315,y:100},{x:90,y:440}];
+    hole = [{x:300,y:290},{x:330,y:290},{x:315,y:380}];
     triangles = POLYGON.tessellate(contour, [hole]);
     console.info("indices: " + triangles);
 
