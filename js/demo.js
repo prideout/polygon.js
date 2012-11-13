@@ -658,12 +658,11 @@ require.define("/application.coffee", function (require, module, exports, __dirn
     };
 
     Application.prototype.updateDisplay = function() {
-      var holes, slice, triangles, _ref;
+      var holes, triangles;
       this.display.setPoints(this.contourPts, this.holePts);
       holes = [this.holePts];
-      _ref = POLYGON.tessellate(this.contourPts, holes), triangles = _ref[0], slice = _ref[1];
-      this.display.setTriangles(triangles);
-      return this.display.setSliceEdge(slice);
+      triangles = POLYGON.tessellate(this.contourPts, holes);
+      return this.display.setTriangles(triangles);
     };
 
     Application.prototype.updateHighlight = function(x, y) {

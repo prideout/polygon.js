@@ -84,9 +84,8 @@ class Application
   updateDisplay: ->
     @display.setPoints @contourPts, @holePts
     holes = [@holePts]
-    [triangles, slice] = POLYGON.tessellate @contourPts, holes
+    triangles = POLYGON.tessellate @contourPts, holes
     @display.setTriangles triangles
-    @display.setSliceEdge slice
 
   updateHighlight: (x, y) ->
     if @shiftKey

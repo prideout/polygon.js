@@ -1,17 +1,29 @@
-POLYGON = {}
-
 # TRIANGULATION OF SIMPLE POLYGONS VIA EAR CLIPPING
 #
 # This is the n-squared algorithm described by David Eberly.  While faster
 # algorithms exist for polygon triangulation, this one is easy to follow.
 #
-# coords  ... coordinate list representing the original polygon.
+# INPUTS:
+#
+# coords  ... coordinate list representing the original polygon in CCW order.
+# holes   ... list of coordinates lists representing holes in CW order.
+#
+# Presently the holes list must have 0 or 1 items.  All input coordinates must
+# have 'x' and 'y' fields.
+#
+# OUTPUTS:
+#
+# triangles ... list of integer indices forming the triangles
+#
+# INTERNAL VARIABLES:
+#
 # polygon ... sequence of indices into 'coords'; represents the clipped polygon.
 # reflex .... boolean list for reflex angles; one entry per vertex in 'polygon'
 # ears ...... indices into 'polygon' for all of its ears
 # n, ncurr, nprev, nnext ... indices into 'coords'
 # p, pcurr, pprev, pnext ... indices into 'polygon'
 #
+POLYGON = {}
 POLYGON.tessellate = (coords, holes) ->
 
   verbose = false
@@ -66,9 +78,9 @@ POLYGON.tessellate = (coords, holes) ->
       p1.x + t * (p0.x - p1.x)
 
   # Return early for degenerate and trivial cases.
-  return [[], []] if coords.length < 3
+  return [] if coords.length < 3
   if coords.length is 3 and holes.length is 0
-    return [[[0, 1, 2]], []]
+    return [0, 1, 2]
 
   # Define some private variables in this closure.
   reflex = []
@@ -258,4 +270,4 @@ POLYGON.tessellate = (coords, holes) ->
         else if not isEar and wasEar
           ears.splice earIndex, 1
 
-  [triangles, slice]
+  triangles
