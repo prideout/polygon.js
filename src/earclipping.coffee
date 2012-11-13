@@ -32,6 +32,7 @@ tessellate = (coords, holes) ->
         xrightmost = coord.x
         Mn = n
     M = hole[Mn]
+    E = 0.0001
     I = new vec2 10000, M.y
     P = new vec2()
     Pn = -1
