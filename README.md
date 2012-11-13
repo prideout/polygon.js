@@ -1,8 +1,8 @@
 If you've got a simple concave polygon with holes and you want to tessellate it into triangles, a simple ear clipping algorithm might be the way to go.  Another popular method is constrained Delaunay triangulation (CDT) but that's a bit overkill if your source data is a directed polyline (as oppposed to a point cloud).
 
-The coffeescript source for my ear clipping implementation is [polygon.coffee](http://github.com/prideout/polygon.js/blob/master/src/polygon.coffee).
+And, if you simply want to *see* the triangles but don't care about storing the topology, you could probably use the stencil buffer trick described [here](http://www.glprogramming.com/red/chapter14.html#name13).
 
-You can use this code in your Javascript project simply by including [polygon.js](http://github.com/prideout/polygon.js/blob/master/js/polygon.js).
+Otherwise, feel free to use my ear clipping implementation!  It's written in coffeescript ([polygon.coffee](http://github.com/prideout/polygon.js/blob/master/src/polygon.coffee)) but it's also available as a single-file Javascript library: [polygon.js](http://github.com/prideout/polygon.js/blob/master/js/polygon.js).
 
 Javascript usage example:
       
