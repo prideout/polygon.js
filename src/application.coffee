@@ -61,17 +61,20 @@ class Application
       @updateDisplay()
 
   initDisplay: ->
+    @pixelRatio = window.devicePixelRatio or 1
+    width = parseInt $('canvas').css('width')
+    height = parseInt $('canvas').css('height')
     try
       c = $('canvas').get 0
+      c.width = width * @pixelRatio
+      c.height = height * @pixelRatio
       gl = c.getContext 'experimental-webgl', antialias: true
       throw new Error() if not gl
     catch error
       msg = 'Alas, your browser does not support WebGL.'
       $('canvas').replaceWith "<p class='error'>#{msg}</p>"
     return false if not gl
-    width = parseInt $('canvas').css('width')
-    height = parseInt $('canvas').css('height')
-    @display = new Display(gl, width, height)
+    @display = new Display gl, width, height, @pixelRatio
 
   requestAnimationFrame: ->
     onTick = => @tick()
@@ -241,18 +244,19 @@ class Application
 
     $(document).on 'click', '.doneButton', => @nextMode()
     c = $('canvas')
+    mouseScale = 1
     c.mousemove (e) =>
-      x = e.clientX - c.position().left
-      y = e.clientY - c.position().top
+      x = mouseScale * (e.clientX - c.position().left)
+      y = mouseScale * (e.clientY - c.position().top)
       @onMove x, y
     c.mousedown (e) =>
-      x = e.clientX - c.position().left
-      y = e.clientY - c.position().top
+      x = mouseScale * (e.clientX - c.position().left)
+      y = mouseScale * (e.clientY - c.position().top)
       @onDown x, y
       e.originalEvent.preventDefault()
     c.mouseup (e) =>
-      x = e.clientX - c.position().left
-      y = e.clientY - c.position().top
+      x = mouseScale * (e.clientX - c.position().left)
+      y = mouseScale * (e.clientY - c.position().top)
       @onUp x, y
     $(document).keyup (e) =>
       s = String.fromCharCode(e.keyCode)

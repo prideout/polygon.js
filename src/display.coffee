@@ -23,7 +23,7 @@ shaders.contour =
 showSliceLine = false
 
 class Display
-  constructor: (context, @width, @height) ->
+  constructor: (context, @width, @height, @scale) ->
     @ready = false
     gl = context
     @programs = compilePrograms shaders
@@ -42,7 +42,7 @@ class Display
     @highlightEdge = -1
     @visualize = false
     gl.clearColor 0.9, 0.9, 0.9, 1.0
-    gl.lineWidth 2
+    gl.lineWidth 2 * @scale
     gl.enable gl.BLEND
     gl.blendFunc gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA
 
@@ -53,7 +53,7 @@ class Display
 
     mv = new mat4()
     proj = new mat4()
-    proj.makeOrthographic(0, 600, 0, 600, 0, 1)
+    proj.makeOrthographic(0, @width, 0, @height, 0, 1)
 
     gl.bindBuffer gl.ARRAY_BUFFER, @coordsBuffer
     gl.enableVertexAttribArray semantics.POSITION
@@ -95,17 +95,17 @@ class Display
           gl.drawElements gl.LINES, 2, gl.UNSIGNED_SHORT, 0
 
       if @highlightEdge > -1
-        gl.lineWidth 4
+        gl.lineWidth 4 * @scale
         gl.uniform4f program.color, 0, 0, 0, 1
         gl.bindBuffer gl.ELEMENT_ARRAY_BUFFER, @hotEdgeBuffer
         gl.drawElements gl.LINES, 2, gl.UNSIGNED_SHORT, 0
-        gl.lineWidth 2
+        gl.lineWidth 2 * @scale
 
     program = @programs.dot
     gl.useProgram program
     gl.uniformMatrix4fv program.modelview, false, mv.elements
     gl.uniformMatrix4fv program.projection, false, proj.elements
-    gl.uniform1f program.pointSize, 8
+    gl.uniform1f program.pointSize, 8 * @scale
     gl.bindTexture gl.TEXTURE_2D, @pointSprite
 
     if not @freezeContour
@@ -128,7 +128,7 @@ class Display
     if @highlightPoint isnt -1
       program = @programs.dot
       gl.useProgram program
-      gl.uniform1f program.pointSize, 14
+      gl.uniform1f program.pointSize, 14 * @scale
       gl.uniform4f program.color, 0, 0, 0, 1
       if @highlightPoint > -1
         gl.drawArrays gl.POINTS, @highlightPoint, 1

@@ -1,16 +1,18 @@
-var require = function (file, cwd) {
+(function(){var require = function (file, cwd) {
     var resolved = require.resolve(file, cwd || '/');
     var mod = require.modules[resolved];
     if (!mod) throw new Error(
         'Failed to resolve module ' + file + ', tried ' + resolved
     );
-    var res = mod._cached ? mod._cached : mod();
+    var cached = require.cache[resolved];
+    var res = cached? cached.exports : mod();
     return res;
-}
+};
 
 require.paths = [];
 require.modules = {};
-require.extensions = [".js",".coffee"];
+require.cache = {};
+require.extensions = [".js",".coffee",".json"];
 
 require._core = {
     'assert': true,
@@ -41,6 +43,7 @@ require.resolve = (function () {
         throw new Error("Cannot find module '" + x + "'");
         
         function loadAsFileSync (x) {
+            x = path.normalize(x);
             if (require.modules[x]) {
                 return x;
             }
@@ -53,7 +56,7 @@ require.resolve = (function () {
         
         function loadAsDirectorySync (x) {
             x = x.replace(/\/+$/, '');
-            var pkgfile = x + '/package.json';
+            var pkgfile = path.normalize(x + '/package.json');
             if (require.modules[pkgfile]) {
                 var pkg = require.modules[pkgfile]();
                 var b = pkg.browserify;
@@ -118,7 +121,7 @@ require.alias = function (from, to) {
     
     var keys = (Object.keys || function (obj) {
         var res = [];
-        for (var key in obj) res.push(key)
+        for (var key in obj) res.push(key);
         return res;
     })(require.modules);
     
@@ -134,80 +137,66 @@ require.alias = function (from, to) {
     }
 };
 
-require.define = function (filename, fn) {
-    var dirname = require._core[filename]
-        ? ''
-        : require.modules.path().dirname(filename)
-    ;
+(function () {
+    var process = {};
+    var global = typeof window !== 'undefined' ? window : {};
+    var definedProcess = false;
     
-    var require_ = function (file) {
-        return require(file, dirname)
-    };
-    require_.resolve = function (name) {
-        return require.resolve(name, dirname);
-    };
-    require_.modules = require.modules;
-    require_.define = require.define;
-    var module_ = { exports : {} };
-    
-    require.modules[filename] = function () {
-        require.modules[filename]._cached = module_.exports;
-        fn.call(
-            module_.exports,
-            require_,
-            module_,
-            module_.exports,
-            dirname,
-            filename
-        );
-        require.modules[filename]._cached = module_.exports;
-        return module_.exports;
-    };
-};
-
-if (typeof process === 'undefined') process = {};
-
-if (!process.nextTick) process.nextTick = (function () {
-    var queue = [];
-    var canPost = typeof window !== 'undefined'
-        && window.postMessage && window.addEventListener
-    ;
-    
-    if (canPost) {
-        window.addEventListener('message', function (ev) {
-            if (ev.source === window && ev.data === 'browserify-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-    }
-    
-    return function (fn) {
-        if (canPost) {
-            queue.push(fn);
-            window.postMessage('browserify-tick', '*');
+    require.define = function (filename, fn) {
+        if (!definedProcess && require.modules.__browserify_process) {
+            process = require.modules.__browserify_process();
+            definedProcess = true;
         }
-        else setTimeout(fn, 0);
+        
+        var dirname = require._core[filename]
+            ? ''
+            : require.modules.path().dirname(filename)
+        ;
+        
+        var require_ = function (file) {
+            var requiredModule = require(file, dirname);
+            var cached = require.cache[require.resolve(file, dirname)];
+
+            if (cached && cached.parent === null) {
+                cached.parent = module_;
+            }
+
+            return requiredModule;
+        };
+        require_.resolve = function (name) {
+            return require.resolve(name, dirname);
+        };
+        require_.modules = require.modules;
+        require_.define = require.define;
+        require_.cache = require.cache;
+        var module_ = {
+            id : filename,
+            filename: filename,
+            exports : {},
+            loaded : false,
+            parent: null
+        };
+        
+        require.modules[filename] = function () {
+            require.cache[filename] = module_;
+            fn.call(
+                module_.exports,
+                require_,
+                module_,
+                module_.exports,
+                dirname,
+                filename,
+                process,
+                global
+            );
+            module_.loaded = true;
+            return module_.exports;
+        };
     };
 })();
 
-if (!process.title) process.title = 'browser';
 
-if (!process.binding) process.binding = function (name) {
-    if (name === 'evals') return require('vm')
-    else throw new Error('No such module')
-};
-
-if (!process.cwd) process.cwd = function () { return '.' };
-
-if (!process.env) process.env = {};
-if (!process.argv) process.argv = [];
-
-require.define("path", function (require, module, exports, __dirname, __filename) {
-function filter (xs, fn) {
+require.define("path",function(require,module,exports,__dirname,__filename,process,global){function filter (xs, fn) {
     var res = [];
     for (var i = 0; i < xs.length; i++) {
         if (fn(xs[i], i, xs)) res.push(xs[i]);
@@ -344,8 +333,65 @@ exports.extname = function(path) {
 
 });
 
-require.define("/application.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
+require.define("__browserify_process",function(require,module,exports,__dirname,__filename,process,global){var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+        && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+        && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            if (ev.source === window && ev.data === 'browserify-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('browserify-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+process.binding = function (name) {
+    if (name === 'evals') return (require)('vm')
+    else throw new Error('No such module. (Possibly not yet loaded)')
+};
+
+(function () {
+    var cwd = '/';
+    var path;
+    process.cwd = function () { return cwd };
+    process.chdir = function (dir) {
+        if (!path) path = require('path');
+        cwd = path.resolve(dir, cwd);
+    };
+})();
+
+});
+
+require.define("/application.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
   var Application, BottomInstructions, Display, Mode, TopInstructions1, TopInstructions2, TopInstructions3, simpleStartFigure, startFigure;
 
   Display = require('./display');
@@ -605,8 +651,13 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
     Application.prototype.initDisplay = function() {
       var c, gl, height, msg, width;
+      this.pixelRatio = window.devicePixelRatio || 1;
+      width = parseInt($('canvas').css('width'));
+      height = parseInt($('canvas').css('height'));
       try {
         c = $('canvas').get(0);
+        c.width = width * this.pixelRatio;
+        c.height = height * this.pixelRatio;
         gl = c.getContext('experimental-webgl', {
           antialias: true
         });
@@ -620,9 +671,7 @@ require.define("/application.coffee", function (require, module, exports, __dirn
       if (!gl) {
         return false;
       }
-      width = parseInt($('canvas').css('width'));
-      height = parseInt($('canvas').css('height'));
-      return this.display = new Display(gl, width, height);
+      return this.display = new Display(gl, width, height, this.pixelRatio);
     };
 
     Application.prototype.requestAnimationFrame = function() {
@@ -868,7 +917,7 @@ require.define("/application.coffee", function (require, module, exports, __dirn
     };
 
     Application.prototype.assignEventHandlers = function() {
-      var c,
+      var c, mouseScale,
         _this = this;
       $(document).bind('keydown', function(e) {
         if (e.keyCode === 16) {
@@ -886,23 +935,24 @@ require.define("/application.coffee", function (require, module, exports, __dirn
         return _this.nextMode();
       });
       c = $('canvas');
+      mouseScale = 1;
       c.mousemove(function(e) {
         var x, y;
-        x = e.clientX - c.position().left;
-        y = e.clientY - c.position().top;
+        x = mouseScale * (e.clientX - c.position().left);
+        y = mouseScale * (e.clientY - c.position().top);
         return _this.onMove(x, y);
       });
       c.mousedown(function(e) {
         var x, y;
-        x = e.clientX - c.position().left;
-        y = e.clientY - c.position().top;
+        x = mouseScale * (e.clientX - c.position().left);
+        y = mouseScale * (e.clientY - c.position().top);
         _this.onDown(x, y);
         return e.originalEvent.preventDefault();
       });
       c.mouseup(function(e) {
         var x, y;
-        x = e.clientX - c.position().left;
-        y = e.clientY - c.position().top;
+        x = mouseScale * (e.clientX - c.position().left);
+        y = mouseScale * (e.clientY - c.position().top);
         return _this.onUp(x, y);
       });
       return $(document).keyup(function(e) {
@@ -933,8 +983,7 @@ require.define("/application.coffee", function (require, module, exports, __dirn
 
 });
 
-require.define("/display.coffee", function (require, module, exports, __dirname, __filename) {
-(function() {
+require.define("/display.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
   var Display, compileProgram, compilePrograms, compileShader, gl, glCheck, loadTexture, semantics, shaders, showSliceLine;
 
   gl = null;
@@ -968,10 +1017,11 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
 
   Display = (function() {
 
-    function Display(context, width, height) {
+    function Display(context, width, height, scale) {
       var _this = this;
       this.width = width;
       this.height = height;
+      this.scale = scale;
       this.ready = false;
       gl = context;
       this.programs = compilePrograms(shaders);
@@ -991,7 +1041,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       this.highlightEdge = -1;
       this.visualize = false;
       gl.clearColor(0.9, 0.9, 0.9, 1.0);
-      gl.lineWidth(2);
+      gl.lineWidth(2 * this.scale);
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
@@ -1007,7 +1057,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       }
       mv = new mat4();
       proj = new mat4();
-      proj.makeOrthographic(0, 600, 0, 600, 0, 1);
+      proj.makeOrthographic(0, this.width, 0, this.height, 0, 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, this.coordsBuffer);
       gl.enableVertexAttribArray(semantics.POSITION);
       gl.vertexAttribPointer(semantics.POSITION, 2, gl.FLOAT, false, stride = 8, 0);
@@ -1042,18 +1092,18 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
           }
         }
         if (this.highlightEdge > -1) {
-          gl.lineWidth(4);
+          gl.lineWidth(4 * this.scale);
           gl.uniform4f(program.color, 0, 0, 0, 1);
           gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.hotEdgeBuffer);
           gl.drawElements(gl.LINES, 2, gl.UNSIGNED_SHORT, 0);
-          gl.lineWidth(2);
+          gl.lineWidth(2 * this.scale);
         }
       }
       program = this.programs.dot;
       gl.useProgram(program);
       gl.uniformMatrix4fv(program.modelview, false, mv.elements);
       gl.uniformMatrix4fv(program.projection, false, proj.elements);
-      gl.uniform1f(program.pointSize, 8);
+      gl.uniform1f(program.pointSize, 8 * this.scale);
       gl.bindTexture(gl.TEXTURE_2D, this.pointSprite);
       if (!this.freezeContour) {
         pointOffset = 0;
@@ -1075,7 +1125,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
       if (this.highlightPoint !== -1) {
         program = this.programs.dot;
         gl.useProgram(program);
-        gl.uniform1f(program.pointSize, 14);
+        gl.uniform1f(program.pointSize, 14 * this.scale);
         gl.uniform4f(program.color, 0, 0, 0, 1);
         if (this.highlightPoint > -1) {
           gl.drawArrays(gl.POINTS, this.highlightPoint, 1);
@@ -1251,8 +1301,7 @@ require.define("/display.coffee", function (require, module, exports, __dirname,
 
 });
 
-require.define("/demo.coffee", function (require, module, exports, __dirname, __filename) {
-    (function() {
+require.define("/demo.coffee",function(require,module,exports,__dirname,__filename,process,global){(function() {
   var Application;
 
   Application = require('./application');
@@ -1265,3 +1314,4 @@ require.define("/demo.coffee", function (require, module, exports, __dirname, __
 
 });
 require("/demo.coffee");
+})();
