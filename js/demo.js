@@ -1273,7 +1273,7 @@ require.define("/display.coffee",function(require,module,exports,__dirname,__fil
     gl.compileShader(handle);
     status = gl.getShaderParameter(handle, gl.COMPILE_STATUS);
     if (!status) {
-      console.error(gl.getShaderInfoLog(handle));
+      console.error(names, gl.getShaderInfoLog(handle));
     }
     return handle;
   };

@@ -220,7 +220,7 @@ compileShader = (names, type) ->
   gl.shaderSource handle, source
   gl.compileShader handle
   status = gl.getShaderParameter handle, gl.COMPILE_STATUS
-  console.error gl.getShaderInfoLog(handle) unless status
+  console.error(names, gl.getShaderInfoLog(handle)) unless status
   handle
 
 loadTexture = (filename, onLoaded) ->
